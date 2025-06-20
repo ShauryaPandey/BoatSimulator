@@ -1,0 +1,67 @@
+# Binary and intermediate files
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Project-specific Visual Studio / Rider files
+.vscode/
+.idea/
+*.VC.db
+*.VC.opendb
+*.sdf
+*.suo
+*.opensdf
+*.log
+
+# Compiled binaries
+*.exe
+*.dll
+*.lib
+*.app
+*.dylib
+*.pdb
+
+# Generated project files (can be regenerated with GenerateProjectFiles)
+*.xcodeproj
+*.xcworkspace
+*.sln
+*.csproj
+*.sdf
+*.opensdf
+*.vcxproj*
+*.gpuproject
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Crash reports
+*.dmp
+
+# User-specific files
+*.user
+*.userprefs
+*.sublime-workspace
+*.sublime-project
+
+# VS Code workspace file
+*.code-workspace
+
+# Rider-specific
+.idea/
+
+# UBT / Engine metadata
+.vs/
+.vscode/
+.cache/
+Engine/DerivedDataCache/
+
+# Optional: Ignore local plugins not meant for sharing
+# Plugins/YourLocalPluginName/
+
+# Ignore config overrides (optional, if you're working solo)
+# Config/DefaultEditorPerProjectUserSettings.ini
+# Config/EditorPerProjectUserSettings.ini

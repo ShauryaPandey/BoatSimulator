@@ -1,0 +1,20 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "Water Interaction",
+  "Description": "C++ Plugin for Wave Simulation and Water Interaction",
+  "Category": "Gameplay",
+  "Modules": [
+    {
+      "Name": "OceanSimulator",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "Boat",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

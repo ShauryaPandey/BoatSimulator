@@ -1,0 +1,117 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Perforce Ignore Rules for Unreal Engine Projects
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Build outputs and intermediate files
+Binaries/
+Build/
+Compiled/
+Intermediate/
+DerivedDataCache/
+Saved/
+
+# Engine‐level caches (if you have the UE source synced under your workspace)
+Engine/Intermediate/
+Engine/Binaries/
+Engine/Saved/
+Engine/DerivedDataCache/
+Engine/Build/
+
+# Plugin build outputs (if you have custom plugins)
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+Plugins/*/Saved/
+Plugins/*/DerivedDataCache/
+
+# Visual Studio / Rider / Xcode / IDEs
+.vs/
+.vscode/
+.idea/
+
+# Visual Studio solution and user files
+*.sln
+*.suo
+*.vcxproj*
+*.vcxproj.user
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.VC.VC.opendb
+
+# Xcode project files
+*.xcodeproj
+*.xcworkspace
+
+# Mac OS generated files
+.DS_Store
+
+# Windows generated files
+Thumbs.db
+desktop.ini
+
+# Log files
+*.log
+Saved/Logs/
+
+# UObject auto‐save backups
+*.autosave
+Saved/Autosaves/
+
+# Temporary or backup files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# Crash dumps
+Saved/Crashes/
+*.dmp
+
+# Unreal Editor derived assets
+#   (e.g. DerivedDataCache, ShaderCache, Cooked folders—if you accidentally cook in‐place)
+DerivedDataCache/
+Saved/Cooked/
+Saved/StagedBuilds/
+
+# Unreal Lightmass / Shader caches
+*.ushaderbytecode
+DerivedDataCache/**
+Saved/UnrealLightmass/
+
+# Asset registry and thumbnail caches
+Saved/AssetRegistry.bin
+Saved/AssetRegistry.bin.bak
+Saved/Thumbnails/
+
+# Config/user settings (local to your machine)
+*.user
+*.userprefs
+*.ini.[0-9]*
+*.ini.*
+
+# Perforce ignored directories
+# (ensure Perforce does not try to add these to depot)
+**/Binaries/**
+**/Intermediate/**
+**/DerivedDataCache/**
+**/Saved/**
+
+# Build scripts or generated files you don’t want in Perforce
+*.Generated.h
+*.generated.cpp
+
+# Ignore any compiled Blueprint files (uassets that are compiled at runtime)
+# (only check in the source uasset, not the IDE‐generated ci files)
+*_C.uasset
+*_C.umap
+
+# Ignore auto‐generated documentation folders (if you generate docs locally)
+Docs/
+Documentation/
+
+# Ignore any runtime‐signed build artifacts (mobile certificates, keystores, etc.)
+*.keystore
+*.mobileprovision
