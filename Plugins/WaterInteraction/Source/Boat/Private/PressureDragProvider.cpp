@@ -21,7 +21,8 @@ void UPressureDragProvider::ContributeForces(IForceContext context, TArray<FComm
         auto TriVertex2 = triangle.Vertex2;
         auto TriVertex3 = triangle.Vertex3;
 
-        FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
+        //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
+        FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
         //Submerged is not just checking if it is submerged but also populating polyInfo with points and information about area and stuff.
         //Thats not good and is misleading. Split into two functions.
         if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
@@ -69,7 +70,9 @@ FVector UPressureDragProvider::ComputePressureDragForce(const PolyInfo& P, TScri
     {
         return FVector{};
     }
-    auto waterSample = waterSurface->QueryHeightAt(FVector2D{ P.gCentroid.X, P.gCentroid.Y });
+   // auto waterSample = waterSurface->QueryHeightAt(FVector2D{ P.gCentroid.X, P.gCentroid.Y });
+    auto waterSample = waterSurface->SampleHeightAt(FVector2D{ P.gCentroid.X, P.gCentroid.Y }, world->TimeSeconds);
+
     float depth_uu = waterSample.Position.Z - P.gCentroid.Z;
     //If the poly is above water height then ignore
     if (depth_uu <= 0)

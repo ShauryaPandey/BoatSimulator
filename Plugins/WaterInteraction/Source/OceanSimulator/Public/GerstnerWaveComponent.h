@@ -40,6 +40,7 @@ class IWaterSurface
     GENERATED_BODY()
 public:
     virtual FWaterSample QueryHeightAt(const FVector2D& XY) const = 0;
+    virtual FWaterSample SampleHeightAt(const FVector2D& XY, float time) const = 0;
     virtual FVector GetWaterVelocity() const = 0;
 };
 /**
@@ -69,6 +70,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Gerstner")
     float Tolerance = 1.0f;
     virtual FWaterSample QueryHeightAt(const FVector2D& WorldXY) const override;
+    virtual FWaterSample SampleHeightAt(const FVector2D& XY, float time) const override;
     virtual FVector GetWaterVelocity() const override;
 protected:
     virtual void BeginPlay() override;
