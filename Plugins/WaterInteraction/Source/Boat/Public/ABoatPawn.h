@@ -12,6 +12,11 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 
+#include "ABoatGameMode.h"
+#include "BoatDebugHUD.h"
+#include "BoatForceComponent.h"
+#include "PolyInfo.h"
+
 #include "GameFramework/Pawn.h"
 #include "ABoatPawn.generated.h"
 
@@ -21,18 +26,6 @@ struct ForcePatch
     FVector Normal;
 };
 
-struct PolyPointsContainer
-{
-    TArray<FVector> Points;
-    FVector Normal;
-};
-
-struct PolyInfo
-{
-    PolyPointsContainer gPointsContainer;
-    FVector gCentroid;
-    float Area;
-};
 /**
  * ABoatPawn
  *   - A simple Pawn that will represent a boat in the WaterInteraction plugin.
@@ -58,7 +51,7 @@ public:
 
     UFUNCTION()
     void ToggleDebug();
-
+    void ToggleBuoyancyDebug();
 
     /** A StaticMeshComponent for the visible boat hull */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boat|Components")
@@ -67,15 +60,13 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boat|Components")
     USceneComponent* BoatRoot;
     /** Example function you might call from Blueprints */
-    UFUNCTION(BlueprintCallable, Category = "Boat|Actions")
-    void CalcLocalVerticesData();
-    void StartBuoyancy();
+   // UFUNCTION(BlueprintCallable, Category = "Boat|Actions")
+    //void CalcLocalVerticesData();
+    //void StartBuoyancy();
 
-    void ClipTriangleAgainstWater(FVector vertex1, FVector vertex2, FVector vertex3, PolyPointsContainer& outPointsContainer, const FWaterSample& waterSample) const;
-    void CalcPolyAreaAndCentroid(PolyInfo& outCentroid) const;
-    void ApplyBuoyantForce(const PolyInfo& Poly);
-    static float CalcAreaOfTriangle(const FVector& vertex1, const FVector& vertex2, const FVector& vertex3);
-    static FVector CalcCentroid(const TArray<FVector>& vertices);
+    //void ClipTriangleAgainstWater(FVector vertex1, FVector vertex2, FVector vertex3, PolyPointsContainer& outPointsContainer, const FWaterSample& waterSample) const;
+    //FVector ApplyBuoyantForce(const PolyInfo& Poly);
+
     TArray<FVector> LocalVertices;
     TArray<uint32> LocalIndices;
     TArray<FVector> LocalNormals;
@@ -84,10 +75,49 @@ public:
     AOceanActor* OceanActor;
 
 protected:
-    bool ShouldDrawDebug = false;
-      UPROPERTY(EditDefaultsOnly, Category="Input")
-    UInputMappingContext*    IMC_Boat;
+    UPROPERTY(VisibleAnywhere)
+    UBoatForceComponent* BoatForceComponent;
 
-    UPROPERTY(EditDefaultsOnly, Category="Input")
-    UInputAction*            IA_ToggleDebug;
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    bool ShouldDrawDebug = false;
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    bool ShouldDrawBuoyancyDebug = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    bool ShouldDrawViscoscityDebug = false;
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    bool ShouldDrawPressureDragDebug = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    bool ShouldDrawStatisticsDebug = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    FVector MovementDirection;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    float Acceleration = 1000;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputMappingContext* IMC_Boat;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* IA_ToggleDebug;
+    UInputAction* IA_ToggleBuoyancyDebug;
+    UInputAction* IA_ToggleStatistics;
+    UInputAction* IA_ToggleViscoscity;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Viscoscity", meta = (ClampMin = "-1.0", ClampMax = "0.0", UIMin = "-1.0", UIMax = "0.0"))
+    float ForwardTrianglesKFactor{ -0.5 };
+
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Viscoscity", meta = (ClampMin = "0.0", ClampMax = "2.0", UIMin = "0.0", UIMax = "2.0"))
+    float BackTrianglesKFactor{ 1 };
+
+
+private:
+    float CalculateIntegratedKFactorForBoat(const PolyInfoList& polyList);
+    /* FVector CalculatePolyVelocity(const PolyInfo& poly) const;
+     void ApplyViscoscity(const PolyInfoList& polyList);
+     float CalculateReynoldsNumber() const;
+     FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo) const;*/
+    ABoatDebugHUD* DebugHUD;
 };

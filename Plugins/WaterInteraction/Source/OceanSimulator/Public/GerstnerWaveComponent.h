@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "WaterSample.h"
 #include "GerstnerWaveComponent.generated.h"
 
 USTRUCT(BlueprintType)
@@ -20,12 +21,12 @@ struct FWave
     float Steepness = 0.5f;
 };
 
-struct FWaterSample
-{
-    FVector Position; // GLobal Position
-    FVector Normal;   //Global Normal
-    bool IsValid;
-};
+//struct FWaterSample
+//{
+//    FVector Position; // Global Position
+//    FVector Normal;   //Global Normal
+//    bool IsValid;
+//};
 
 UINTERFACE(MinimalAPI, Blueprintable)
 class UWaterSurface : public UInterface
@@ -39,6 +40,7 @@ class IWaterSurface
     GENERATED_BODY()
 public:
     virtual FWaterSample QueryHeightAt(const FVector2D& XY) const = 0;
+    virtual FVector GetWaterVelocity() const = 0;
 };
 /**
  * A component to drive ocean simulation behavior.
@@ -67,7 +69,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Gerstner")
     float Tolerance = 1.0f;
     virtual FWaterSample QueryHeightAt(const FVector2D& WorldXY) const override;
-
+    virtual FVector GetWaterVelocity() const override;
 protected:
     virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -82,4 +84,5 @@ private:
     void GenerateWaves();
     void UpdateWaves(float Time);
     void UpdateMaxmiumWaveHeight(float vertexHeight);
+    
 };

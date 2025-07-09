@@ -43,12 +43,12 @@ void UGerstnerWaveComponent::BeginPlay()
 
 void UGerstnerWaveComponent::GenerateWaves()
 {
-    //Waves = {
-    //    { {  1,   0},         100.f,       5.f,         200.0f,                      0.9f  },
-    //    { {  0.8, 0.6},       75.f,        3.5f,        25.0f,                      0.8f  },
-    //    { {  0.6,-0.8},       50.f,        2.5f,        300.0f,                      0.7f  },
-    //    { { -0.5, 0.5},       30.f,        1.5f,        40.0f,                      0.6f  }
-    //};
+    Waves = {
+        { {  1,   0},         100.f,       5.f,         200.0f,                      0.9f  },
+        { {  0.8, 0.6},       75.f,        3.5f,        25.0f,                      0.8f  },
+        { {  0.6,-0.8},       50.f,        2.5f,        300.0f,                      0.7f  },
+        { { -0.5, 0.5},       30.f,        1.5f,        40.0f,                      0.6f  }
+    };
     //Waves = {
     //    // { Direction, Wavelength, Amplitude, Speed, Steepness }
     //    { { 1,  0}, 200.f,  2.f, 1.0f, 0.8f },
@@ -345,6 +345,23 @@ FWaterSample UGerstnerWaveComponent::QueryHeightAt(const FVector2D& WorldXY) con
     //DrawDebugSphere(GetWorld(), FVector{ WorldXY,GetOwner()->GetActorLocation().Z + Z }, 4.f, 8, FColor::Red, false,0);
     return { FVector(WorldXY, GetOwner()->GetActorLocation().Z+Z), N, true };
 
+}
+
+/// <summary>
+/// This function gives the velocity of the water surface
+/// </summary>
+/// <returns></returns>
+FVector UGerstnerWaveComponent::GetWaterVelocity() const
+{
+    //To-Do: Dont compute every call, since this does not change
+    //To-Do: Change Wave direction to 3d from 2d
+    const float UU_TO_M = 0.01f;
+    FVector waterVelocity{};
+    for (const auto& wave : Waves)
+    {
+        waterVelocity += FVector{ wave.Direction.GetSafeNormal() * wave.Speed,0 };
+    }
+    return waterVelocity * UU_TO_M;
 }
 
 void UGerstnerWaveComponent::TickComponent(
