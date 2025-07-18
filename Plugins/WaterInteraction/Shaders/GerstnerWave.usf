@@ -1,0 +1,56 @@
+cbuffer FGerstnerWaveUBO : register(b0)
+{
+    float Time;
+    int NumWaves;
+    float4 Directions[8];
+    float Amplitudes[8];
+    float Wavelengths[8];
+    float Steepnesses[8];
+    float Speeds[8];
+};
+
+float3 GerstnerWaveOffset(float2 pos, out float3 normal)
+{
+    float3 displaced = float3(pos.x, pos.y, 0);
+    normal = float3(0, 0, 1);
+
+    for (int i = 0; i < NumWaves; ++i)
+    {
+        float k = 2 * 3.14159 / Wavelengths[i];
+        float omega = Speeds[i] * k;
+        float2 D = normalize(Directions[i]);
+        float Qi = Steepnesses[i] / (k * Amplitudes[i] * NumWaves);
+        Qi = clamp(Qi, 0, 1);
+
+        float dot = dot(D, pos);
+        float phase = k * dot - omega * Time;
+
+        float cosPhase = cos(phase);
+        float sinPhase = sin(phase);
+
+        displaced.x += Qi * Amplitudes[i] * D.x * cosPhase;
+        displaced.y += Qi * Amplitudes[i] * D.y * cosPhase;
+        displaced.z += Amplitudes[i] * sinPhase;
+
+        // Normal contribution
+        float dx = -D.x * Qi * Amplitudes[i] * k * sinPhase;
+        float dy = -D.y * Qi * Amplitudes[i] * k * sinPhase;
+        float dz = -Qi * Amplitudes[i] * k * cosPhase;
+
+        normal += float3(dx, dy, dz);
+    }
+
+    normal = normalize(cross(float3(1,0,0), float3(0,1,0)) + normal);
+    return displaced;
+}
+
+void MainVS(
+    in float4 InPosition : ATTRIBUTE0,
+    out float4 OutPosition : SV_POSITION,
+    out float3 OutNormal : TEXCOORD0)
+{
+    float3 normal;
+    float3 newPos = GerstnerWaveOffset(InPosition.xy, normal);
+    OutPosition = float4(newPos, 1.0);
+    OutNormal = normal;
+}

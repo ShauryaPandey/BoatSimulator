@@ -13,7 +13,7 @@ class UPressureDragProvider : public UForceProviderBase
 {
     GENERATED_BODY()
 public:
-    virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue) override;
+    virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& forceComponentMutex) override;
     virtual void ContributeForces_Implementation(IForceContext context, TArray<FCommandPtr>& outQueue)
     {
     }
@@ -35,4 +35,5 @@ public:
 private:
 
     FVector ComputePressureDragForce(const PolyInfo& P, TScriptInterface<IWaterSurface> waterSurface, const UStaticMeshComponent* hullMesh, UWorld* world, const ABoatDebugHUD* debugHUD) const;
+    FCriticalSection Mutex;
 };

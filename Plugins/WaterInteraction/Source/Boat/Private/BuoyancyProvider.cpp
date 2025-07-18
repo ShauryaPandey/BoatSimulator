@@ -2,9 +2,11 @@
 #include "BuoyancyProvider.h"
 #include "ForceCommands.h"
 #include "ForceProviderHelpers.h"
+#include "Async/Fundamental/Task.h"
+#include "Tasks/Task.h"
 #include "BoatDebugHUD.h"
 //Triangles are in world space
-void UBuoyancyProvider::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue)
+void UBuoyancyProvider::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& forceComponentMutex)
 {
     check(context.HullMesh != nullptr);
     if (context.HullMesh == nullptr)
@@ -13,40 +15,101 @@ void UBuoyancyProvider::ContributeForces(IForceContext context, TArray<FCommandP
     }
 
     FVector totalForce = FVector{}, totalTorque = FVector{};
-    for (auto& triangle : context.HullTriangles.Items)
+    ensure(context.HullTriangles != nullptr);
+    if (context.HullTriangles == nullptr)
     {
-        PolyInfo polyInfo;
-        // 1) filter only submerged:
-        auto TriVertex1 = triangle.Vertex1;
-        auto TriVertex2 = triangle.Vertex2;
-        auto TriVertex3 = triangle.Vertex3;
+        return;
+    }
+    TArray<UE::Tasks::FTask> TaskHandles;
 
-        //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
-        FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
+    int BatchSize = 100;
+    int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
+    if (context.HullTriangles->Items.Num() % BatchSize != 0)
+    {
+        NumBatches += 1; // if there is a remainder, we need one more batch
+    }
 
-        if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+    for (int batchIndex = 0; batchIndex < NumBatches; ++batchIndex)
+    {
+        UE::Tasks::FTask task = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&,batchIndex]
+            {
+                FVector localTotalForce = FVector{}, localTotalTorque = FVector{};
+                for (int idx = 0; idx < BatchSize; ++idx)
+                {
+                    if (batchIndex * BatchSize + idx >= context.HullTriangles->Items.Num())
+                    {
+                        break; // if we exceed the number of triangles, exit the loop
+                    }
+                    // Get the triangle at the current index in the batch
+                    auto& triangle = context.HullTriangles->Items[batchIndex * BatchSize + idx];
+                    PolyInfo polyInfo;
+                    // 1) filter only submerged:
+                    auto TriVertex1 = triangle.Vertex1;
+                    auto TriVertex2 = triangle.Vertex2;
+                    auto TriVertex3 = triangle.Vertex3;
+
+                    const FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f }, GetWorld()->TimeSeconds);
+
+                    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+                    {
+                        continue;
+                    }
+
+                    FVector polyForce = ComputeBuoyantForce(polyInfo, context.WaterSurface, context.World, context.DebugHUD);
+                    localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
+                    localTotalForce += polyForce;
+                }
+                Mutex.Lock();
+                totalForce += localTotalForce;
+                totalTorque += localTotalTorque;
+                Mutex.Unlock();
+            });
+        TaskHandles.Add(task);
+    }
+
+    //for (auto& triangle : context.HullTriangles->Items)
+    //{
+    //    PolyInfo polyInfo;
+    //    // 1) filter only submerged:
+    //    auto TriVertex1 = triangle.Vertex1;
+    //    auto TriVertex2 = triangle.Vertex2;
+    //    auto TriVertex3 = triangle.Vertex3;
+
+    //    //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
+    //    FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
+
+    //    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+    //    {
+    //        continue;
+    //    }
+    //    // 2) compute force vector at P.gCentroid:
+    //    FVector polyForce = ComputeBuoyantForce(polyInfo, context.WaterSurface, context.World,context.DebugHUD);
+    //    totalForce += polyForce;
+    //    //totalTorque += (polyInfo.gCentroid - context.HullMesh->GetCenterOfMass()).RotateAngleAxis(0, FVector::UpVector).operator^(polyForce);
+    //    totalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
+    //}
+    UE::Tasks::FTask FinalTask = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&]()
         {
-            continue;
-        }
-        // 2) compute force vector at P.gCentroid:
-        FVector polyForce = ComputeBuoyantForce(polyInfo, context.WaterSurface, context.World,context.DebugHUD);
-        totalForce += polyForce;
-        //totalTorque += (polyInfo.gCentroid - context.HullMesh->GetCenterOfMass()).RotateAngleAxis(0, FVector::UpVector).operator^(polyForce);
-        totalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
-    }
-    if (context.DebugHUD != nullptr)
-    {
-        auto totalForceInNewton = totalForce / 100.0f;
-        context.DebugHUD->SetStat("Total BuoyantForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
-        context.DebugHUD->SetStat("Total BuoyantTorque", totalTorque.Size());
-    }
-    // 3) enqueue a command
-    outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
-    outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
+            forceComponentMutex.Lock();
+            if (context.DebugHUD != nullptr)
+            {
+                auto totalForceInNewton = totalForce / 100.0f;
+                context.DebugHUD->SetStat("Total BuoyantForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+                context.DebugHUD->SetStat("Total BuoyantTorque", totalTorque.Size());
+            }
+            // 3) enqueue a command
+            //Out queue is shared between multiple providers
+            outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
+            outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
+            forceComponentMutex.Unlock();
+
+        }, UE::Tasks::Prerequisites(TaskHandles)); // Wait for all tasks to complete
+    FinalTask.Wait(); // Wait for the final task to complete
 }
 
-FVector UBuoyancyProvider::ComputeBuoyantForce(const PolyInfo& Poly, TScriptInterface<IWaterSurface> waterSurface, UWorld* world,const ABoatDebugHUD* debugHUD) const
+FVector UBuoyancyProvider::ComputeBuoyantForce(const PolyInfo& Poly, TScriptInterface<IWaterSurface> waterSurface, UWorld* world, const ABoatDebugHUD* debugHUD) const
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UBuoyancyProvider::ComputeBuoyantForce);
     check(world != nullptr);
     check(debugHUD != nullptr);
     if (world == nullptr || debugHUD == nullptr)
@@ -67,7 +130,7 @@ FVector UBuoyancyProvider::ComputeBuoyantForce(const PolyInfo& Poly, TScriptInte
     }
 
     //auto waterSample = waterSurface->QueryHeightAt(FVector2D{ Poly.gCentroid.X, Poly.gCentroid.Y });
-    auto waterSample = waterSurface->SampleHeightAt(FVector2D{ Poly.gCentroid.X, Poly.gCentroid.Y },world->TimeSeconds);
+    auto waterSample = waterSurface->SampleHeightAt(FVector2D{ Poly.gCentroid.X, Poly.gCentroid.Y }, world->TimeSeconds);
     float depth_uu = waterSample.Position.Z - Poly.gCentroid.Z;
     if (depth_uu <= 0)
     {

@@ -4,7 +4,7 @@
 #include "ForceProviderHelpers.h"
 #include "BoatDebugHUD.h"
 
-void UPressureDragProvider::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue)
+void UPressureDragProvider::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& forceComponentMutex)
 {
     check(context.HullMesh != nullptr);
     if (context.HullMesh == nullptr)
@@ -13,42 +13,119 @@ void UPressureDragProvider::ContributeForces(IForceContext context, TArray<FComm
     }
 
     FVector totalForce = FVector{}, totalTorque = FVector{};
-    for (auto& triangle : context.HullTriangles.Items)
+    ensure(context.HullTriangles != nullptr);
+    if (context.HullTriangles == nullptr)
     {
-        PolyInfo polyInfo;
-        // 1) filter only submerged:
-        auto TriVertex1 = triangle.Vertex1;
-        auto TriVertex2 = triangle.Vertex2;
-        auto TriVertex3 = triangle.Vertex3;
+        return;
+    }
+    TArray<UE::Tasks::FTask> TaskHandles;
 
-        //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
-        FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
-        //Submerged is not just checking if it is submerged but also populating polyInfo with points and information about area and stuff.
-        //Thats not good and is misleading. Split into two functions.
-        if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
-        {
-            continue;
-        }
-        FVector polyForce = ComputePressureDragForce(polyInfo, context.WaterSurface, context.HullMesh, context.World, context.DebugHUD);
-        totalForce += polyForce;
-        totalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
-    }
-    if (context.DebugHUD->ShouldDrawStatisticsDebug == true)
+    int BatchSize = 100;
+    int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
+    if (context.HullTriangles->Items.Num() % BatchSize != 0)
     {
-        auto totalForceInNewton = totalForce / 100.0f;
-        if (totalForce.Z > 0)
-        {
-            context.DebugHUD->SetStat("Total PressureDragForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
-        }
-        else
-        {
-            context.DebugHUD->SetStat("Total PressureDragForce", -totalForceInNewton.Size()); //Put all debug variables into DebugHUD
-        }
-        context.DebugHUD->SetStat("Total Pressure Drag Torque", totalTorque.Size());
+        NumBatches += 1; // if there is a remainder, we need one more batch
     }
+
+    for (int batchIndex = 0; batchIndex < NumBatches; ++batchIndex)
+    {
+        UE::Tasks::FTask task = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&, batchIndex]
+            {
+                FVector localTotalForce = FVector{}, localTotalTorque = FVector{};
+                for (int idx = 0; idx < BatchSize; ++idx)
+                {
+                    if (batchIndex * BatchSize + idx >= context.HullTriangles->Items.Num())
+                    {
+                        break; // if we exceed the number of triangles, exit the loop
+                    }
+                    // Get the triangle at the current index in the batch
+                    auto& triangle = context.HullTriangles->Items[batchIndex * BatchSize + idx];
+                    PolyInfo polyInfo;
+                    // 1) filter only submerged:
+                    auto TriVertex1 = triangle.Vertex1;
+                    auto TriVertex2 = triangle.Vertex2;
+                    auto TriVertex3 = triangle.Vertex3;
+
+                    const FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f }, GetWorld()->TimeSeconds);
+
+                    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+                    {
+                        continue;
+                    }
+                    FVector polyForce = ComputePressureDragForce(polyInfo, context.WaterSurface, context.HullMesh, context.World, context.DebugHUD);
+                    localTotalForce += polyForce;
+                    localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
+                }
+                Mutex.Lock();
+                totalForce += localTotalForce;
+                totalTorque += localTotalTorque;
+                Mutex.Unlock();
+            });
+        TaskHandles.Add(task);
+    }
+
+    //for (auto& triangle : context.HullTriangles->Items)
+    //{
+    //    PolyInfo polyInfo;
+    //    // 1) filter only submerged:
+    //    auto TriVertex1 = triangle.Vertex1;
+    //    auto TriVertex2 = triangle.Vertex2;
+    //    auto TriVertex3 = triangle.Vertex3;
+
+    //    //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
+    //    FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
+    //    //Submerged is not just checking if it is submerged but also populating polyInfo with points and information about area and stuff.
+    //    //Thats not good and is misleading. Split into two functions.
+    //    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+    //    {
+    //        continue;
+    //    }
+    //    FVector polyForce = ComputePressureDragForce(polyInfo, context.WaterSurface, context.HullMesh, context.World, context.DebugHUD);
+    //    totalForce += polyForce;
+    //    totalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
+    //}
+    UE::Tasks::FTask FinalTask = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&]()
+        {
+            forceComponentMutex.Lock();
+            if (context.DebugHUD->ShouldDrawStatisticsDebug == true)
+            {
+                auto totalForceInNewton = totalForce / 100.0f;
+                if (totalForce.Z > 0)
+                {
+                    context.DebugHUD->SetStat("Total PressureDragForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+                }
+                else
+                {
+                    context.DebugHUD->SetStat("Total PressureDragForce", -totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+                }
+                context.DebugHUD->SetStat("Total Pressure Drag Torque", totalTorque.Size());
+
+                //Enqueue force and torque commands into the queue
+                outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
+                outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
+            }
+            forceComponentMutex.Unlock();
+
+        }, UE::Tasks::Prerequisites(TaskHandles));
+    FinalTask.Wait();
+    //if (context.DebugHUD->ShouldDrawStatisticsDebug == true)
+    //{
+    //    auto totalForceInNewton = totalForce / 100.0f;
+    //    if (totalForce.Z > 0)
+    //    {
+    //        context.DebugHUD->SetStat("Total PressureDragForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+    //    }
+    //    else
+    //    {
+    //        context.DebugHUD->SetStat("Total PressureDragForce", -totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+    //    }
+    //    context.DebugHUD->SetStat("Total Pressure Drag Torque", totalTorque.Size());
+    //}
     // 3) enqueue a command
-    outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
-    outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
+    //outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
+    //outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
+
+
 }
 
 FVector UPressureDragProvider::ComputePressureDragForce(const PolyInfo& P, TScriptInterface<IWaterSurface> waterSurface, const UStaticMeshComponent* hullMesh, UWorld* world, const ABoatDebugHUD* debugHUD) const

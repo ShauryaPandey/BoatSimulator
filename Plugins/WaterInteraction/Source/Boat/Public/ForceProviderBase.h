@@ -11,5 +11,5 @@ class BOAT_API UForceProviderBase : public UObject, public IForceProvider
   GENERATED_BODY()
   // …
 public:
-  virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue) override {}
+  virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex) override {}
 };

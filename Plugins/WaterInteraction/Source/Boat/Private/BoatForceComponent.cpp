@@ -22,19 +22,6 @@ UBoatForceComponent::UBoatForceComponent()
 void UBoatForceComponent::InitializeComponent()
 {
     Super::InitializeComponent();
-  
-    //UBuoyancyProvider* Buoyancy = NewObject<UBuoyancyProvider>(this, UBuoyancyProvider::StaticClass());
-    //// Wrap it in a TScriptInterface and add to the array
-    //Providers.Add(TScriptInterface<IForceProvider>(Buoyancy));
-
-    //// Same for viscosity
-    //UViscosityProvider* Viscosity = NewObject<UViscosityProvider>(this, UViscosityProvider::StaticClass());
-    //Providers.Add(TScriptInterface<IForceProvider>(Viscosity));
-
-    //// And pressure drag...
-    //UPressureDragProvider* PD = NewObject<UPressureDragProvider>(this, UPressureDragProvider::StaticClass());
-    //Providers.Add(TScriptInterface<IForceProvider>(PD));
-    
 
 }
 
@@ -71,20 +58,24 @@ void UBoatForceComponent::TickComponent(
     }
     TriangleInfoList globalHullTriangles;
     CalculateGlobalHullTriangles(globalHullTriangles);
-    IForceContext forceContext{ globalHullTriangles ,HullMesh,GetWorld(),WaterSurface,DebugHUD };
+    IForceContext forceContext{ &globalHullTriangles ,HullMesh,GetWorld(),WaterSurface,DebugHUD };
     // ask each provider to append commands
     ForceQueue.Empty();
 
-    for (auto& Prov : _Providers)
-    {
-        Prov->ContributeForces(forceContext, ForceQueue);
-    }
+    ParallelFor(_Providers.Num(), [&](int32_t idx) {
+        _Providers[idx]->ContributeForces(forceContext, ForceQueue,BoatForceComponentMutex);
+        });
+    /*   for (auto& Prov : _Providers)
+       {
+           Prov->ContributeForces(forceContext, ForceQueue);
+       }*/
 
     // execute them all in one go
-    for (auto& Cmd : ForceQueue)
+ /*   for (auto& Cmd : ForceQueue)
     {
         Cmd->Execute(HullMesh);
-    }
+    }*/
+    ParallelFor(ForceQueue.Num(), [&](int32_t idx) {ForceQueue[idx]->Execute(HullMesh); });
 }
 
 /// <summary>
@@ -95,36 +86,68 @@ void UBoatForceComponent::TickComponent(
 /// <param name="globalHullTriangles"></param>
 void  UBoatForceComponent::CalculateGlobalHullTriangles(TriangleInfoList& globalHullTriangles) const
 {
-    TRACE_CPUPROFILER_EVENT_SCOPE(ABoatPawn::StartBuoyancy);
-    // Example function you can call from Blueprint to initiate some behavior
-    UE_LOG(LogTemp, Log, TEXT("ABoatPawn::StartBuoyancy() called on %s"), *GetName());
+    TRACE_CPUPROFILER_EVENT_SCOPE(UBoatForceComponent::CalculateGlobalHullTriangles);
+
     static int actorId = 0;
     const auto& BoatTransform = HullMesh->GetComponentTransform(); //Using Actor transform previously but this is better since this is more accurate.
-    
+
     UE_LOG(LogTemp, Warning, TEXT("Actor Location %d : %s"), actorId, *BoatTransform.GetLocation().ToString());
     //Get local vertices and convert to world coordinates
     check(globalHullTriangles.Items.Num() == 0); //The list should not be already populated.
-    for (int i = 0; i < LocalVertices.Num(); ++i)
+    //Do this task first
+    /*for (int i = 0; i < LocalVertices.Num(); ++i)
     {
         FVector Position_W = BoatTransform.TransformPosition(LocalVertices[i]);
-    }
-    int32 index = 0;
-    while (index + 2 < LocalIndices.Num())
-    {
-        uint32 tri_index1 = LocalIndices[index++];
-        uint32 tri_index2 = LocalIndices[index++];
-        uint32 tri_index3 = LocalIndices[index++];
-        check(tri_index1 != tri_index2 && tri_index1 != tri_index3 && tri_index2 != tri_index3);
-        FVector localTriVertex1 = LocalVertices[tri_index1];
-        FVector localTriVertex2 = LocalVertices[tri_index2];
-        FVector localTriVertex3 = LocalVertices[tri_index3];
-        check(localTriVertex1 != localTriVertex2 && localTriVertex1 != localTriVertex3 && localTriVertex2 != localTriVertex3);
-        FVector TriVertex1 = BoatTransform.TransformPosition(localTriVertex1);
-        FVector TriVertex2 = BoatTransform.TransformPosition(localTriVertex2);
-        FVector TriVertex3 = BoatTransform.TransformPosition(localTriVertex3);
-        check(TriVertex1 != TriVertex2 && TriVertex1 != TriVertex3 && TriVertex2 != TriVertex3);
-        globalHullTriangles.Items.Add(TriangleInfo{ TriVertex1,TriVertex2,TriVertex3 });
-    }
+    }*/
+
+    //int32 index = 0;
+    ////Then chain with the following task
+    //while (index + 2 < LocalIndices.Num())
+    //{
+    //    uint32 tri_index1 = LocalIndices[index++];
+    //    uint32 tri_index2 = LocalIndices[index++];
+    //    uint32 tri_index3 = LocalIndices[index++];
+    //    check(tri_index1 != tri_index2 && tri_index1 != tri_index3 && tri_index2 != tri_index3);
+    //    FVector localTriVertex1 = LocalVertices[tri_index1];
+    //    FVector localTriVertex2 = LocalVertices[tri_index2];
+    //    FVector localTriVertex3 = LocalVertices[tri_index3];
+    //    check(localTriVertex1 != localTriVertex2 && localTriVertex1 != localTriVertex3 && localTriVertex2 != localTriVertex3);
+    //    FVector TriVertex1 = BoatTransform.TransformPosition(localTriVertex1);
+    //    FVector TriVertex2 = BoatTransform.TransformPosition(localTriVertex2);
+    //    FVector TriVertex3 = BoatTransform.TransformPosition(localTriVertex3);
+    //    check(TriVertex1 != TriVertex2 && TriVertex1 != TriVertex3 && TriVertex2 != TriVertex3);
+    //    globalHullTriangles.Items.Add(TriangleInfo{ TriVertex1,TriVertex2,TriVertex3 });
+    //}
+    FCriticalSection Mutex;
+    ParallelFor(LocalIndices.Num(), [&](int32_t idx)
+        {
+            if (idx + 2 >= LocalIndices.Num())
+            {
+                return;
+            }
+            if (idx % 3 != 0)
+            {
+                return;
+            }
+            else
+            {
+                uint32 tri_index1 = LocalIndices[idx];
+                uint32 tri_index2 = LocalIndices[idx + 1];
+                uint32 tri_index3 = LocalIndices[idx + 2];
+                check(tri_index1 != tri_index2 && tri_index1 != tri_index3 && tri_index2 != tri_index3);
+                FVector localTriVertex1 = LocalVertices[tri_index1];
+                FVector localTriVertex2 = LocalVertices[tri_index2];
+                FVector localTriVertex3 = LocalVertices[tri_index3];
+                check(localTriVertex1 != localTriVertex2 && localTriVertex1 != localTriVertex3 && localTriVertex2 != localTriVertex3);
+                FVector TriVertex1 = BoatTransform.TransformPosition(localTriVertex1);
+                FVector TriVertex2 = BoatTransform.TransformPosition(localTriVertex2);
+                FVector TriVertex3 = BoatTransform.TransformPosition(localTriVertex3);
+                check(TriVertex1 != TriVertex2 && TriVertex1 != TriVertex3 && TriVertex2 != TriVertex3);
+                Mutex.Lock();
+                globalHullTriangles.Items.Add(TriangleInfo{ TriVertex1,TriVertex2,TriVertex3 });
+                Mutex.Unlock();
+            }
+        });
 }
 
 /// <summary>

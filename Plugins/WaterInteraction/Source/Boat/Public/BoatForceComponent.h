@@ -59,4 +59,5 @@ public:
     TArray<UForceProviderBase*> _Providers;
 private:
     //TArray<IForceProvider*> _Providers; //This is used to call the ContributeForces function of each provider
+    FCriticalSection BoatForceComponentMutex; // Mutex to protect ForceQueue from concurrent access
 };

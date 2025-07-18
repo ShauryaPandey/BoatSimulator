@@ -2,8 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "UniformBuffer.h"
 #include "WaterSample.h"
 #include "GerstnerWaveComponent.generated.h"
+
 
 USTRUCT(BlueprintType)
 struct FWave
@@ -69,6 +71,8 @@ public:
     TArray<FWave> Waves;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Gerstner")
     float Tolerance = 1.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Gerstner")
+    UMaterialParameterCollection* WavesMaterialParameterCollection;
     virtual FWaterSample QueryHeightAt(const FVector2D& WorldXY) const override;
     virtual FWaterSample SampleHeightAt(const FVector2D& XY, float time) const override;
     virtual FVector GetWaterVelocity() const override;

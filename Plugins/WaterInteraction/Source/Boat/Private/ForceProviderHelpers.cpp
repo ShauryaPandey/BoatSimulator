@@ -216,7 +216,7 @@ namespace ForceProviderHelpers
         }
     }
 
-    bool GetSubmergedPolygon(const TriangleInfo& triangle, PolyInfo& outPoly,FWaterSample waterSample)
+    bool GetSubmergedPolygon(const TriangleInfo& triangle, PolyInfo& outPoly,const FWaterSample& waterSample)
     {
         auto TriVertex1 = triangle.Vertex1;
         auto TriVertex2 = triangle.Vertex2;

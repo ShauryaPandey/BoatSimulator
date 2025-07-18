@@ -6,11 +6,19 @@ public class OceanSimulator : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PublicDependencyModuleNames.AddRange(new string[]
+            PublicDependencyModuleNames.AddRange(new string[]
         {
-            "Core", "CoreUObject", "Engine", "InputCore", "ProceduralMeshComponent"
+            "Core",
+            "CoreUObject",
+            "Engine",
+            "InputCore",
+            "ProceduralMeshComponent"
         });
 
-        PrivateDependencyModuleNames.AddRange(new string[] { });
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "RenderCore",
+            "RHI",
+        });
     }
 }

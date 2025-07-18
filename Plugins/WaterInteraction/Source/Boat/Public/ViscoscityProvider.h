@@ -13,7 +13,7 @@ class UViscoscityProvider : public UForceProviderBase
 {
 	GENERATED_BODY()
 public:
-	virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue) override;
+	virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex) override;
 	virtual void ContributeForces_Implementation(IForceContext context, TArray<FCommandPtr>& outQueue)
 	{
 	}
@@ -26,4 +26,5 @@ private:
 	FVector ComputeViscousForce(const PolyInfo& info, UWorld* world, const UStaticMeshComponent* hullMesh, const TScriptInterface<IWaterSurface> waterSurface, const ABoatDebugHUD* debugHUD) const;
 	/*FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo, const TScriptInterface<IWaterSurface> waterSurface, const UStaticMeshComponent* hullMesh, UWorld* world, const ABoatDebugHUD* debugHUD) const;
 	FVector CalculatePolyVelocity(const PolyInfo& poly, const UStaticMeshComponent* hullMesh) const;*/
+	FCriticalSection Mutex;
 };
