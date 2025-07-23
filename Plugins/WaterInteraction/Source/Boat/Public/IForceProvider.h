@@ -11,17 +11,18 @@
 
 struct PolyInfo;
 using FCommandPtr = TUniquePtr<IForceCommand>;
+class IWaterSurface;
+class ABoatDebugHUD;
 
 struct IForceContext
 {
 	const TriangleInfoList* HullTriangles;
-	//const FTransform BoatTransform;
 	const UStaticMeshComponent* HullMesh;
-	UWorld* World;
-	TScriptInterface<IWaterSurface> WaterSurface;
-	//FVector BoatCenterOfMass;
+	const UWorld* World;
+	const TScriptInterface<IWaterSurface> WaterSurface;
 	ABoatDebugHUD* DebugHUD;
-	IForceContext(const TriangleInfoList* triangles, const UStaticMeshComponent* hullMesh, UWorld* world, TScriptInterface<IWaterSurface> waterSurface, ABoatDebugHUD* debugHUD) :
+
+	IForceContext(const TriangleInfoList* triangles, const UStaticMeshComponent* hullMesh, const UWorld* world,const TScriptInterface<IWaterSurface> waterSurface, ABoatDebugHUD* debugHUD) :
 		HullTriangles(triangles), HullMesh(hullMesh), World(world), WaterSurface(waterSurface),DebugHUD(debugHUD)
 	{
 	}
@@ -48,5 +49,5 @@ public:
 	 * @param HullPolys   all hull polygons - Each Provider must know how to filter the hull Polys
 	 * @param OutQueue    append zero or more commands here 
 	 */
-	virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex) = 0;
+	virtual FVector ComputeForce(const PolyInfo* Poly, IForceContext context) const = 0;
 };

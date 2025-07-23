@@ -10,6 +10,7 @@ struct FAddForceAtLocationCommand : public IForceCommand
 	FAddForceAtLocationCommand(const FVector& InF, const FVector& InL)
 		: Force(InF), Location(InL) {}
 	virtual void Execute(UPrimitiveComponent* Target) override;
+	virtual void DrawDebug(const UWorld* world) override;
 };
 
 /** Apply a pure torque */

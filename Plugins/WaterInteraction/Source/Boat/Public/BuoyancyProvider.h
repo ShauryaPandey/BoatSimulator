@@ -8,18 +8,11 @@
 #include "GerstnerWaveComponent.h"
 #include "BuoyancyProvider.generated.h"
 
-struct TriangleInfoList;
 UCLASS(Blueprintable, EditInlineNew)
 class UBuoyancyProvider : public UForceProviderBase
 {
 	GENERATED_BODY()
 public:
-	virtual void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex) override;
-	virtual void ContributeForces_Implementation(IForceContext context, TArray<FCommandPtr>& outQueue)
-	{
-	}
-private:
-	//bool IsSubmerged(const TriangleInfo& triangle, PolyInfo& outPoly) const;
-	FVector ComputeBuoyantForce(const PolyInfo& P, TScriptInterface<IWaterSurface>, UWorld* world, const ABoatDebugHUD* debugHUD) const;
-	FCriticalSection Mutex;
+	virtual FVector ComputeForce(const PolyInfo* Poly,IForceContext context) const override;
+	virtual FString GetForceProviderName() const override;
 };

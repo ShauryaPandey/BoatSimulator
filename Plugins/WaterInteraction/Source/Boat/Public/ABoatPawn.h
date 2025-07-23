@@ -16,7 +16,7 @@
 #include "BoatDebugHUD.h"
 #include "BoatForceComponent.h"
 #include "PolyInfo.h"
-
+#include "BoatRudder.h"
 #include "GameFramework/Pawn.h"
 #include "ABoatPawn.generated.h"
 
@@ -53,6 +53,13 @@ public:
     void ToggleDebug();
     void ToggleBuoyancyDebug();
 
+    void MoveBoatForward();
+    void TurnBoatRight();
+    void TurnBoatLeft();
+    void Throttle(const FInputActionValue& Value);
+    void Steer(const FInputActionValue& Value);
+
+
     /** A StaticMeshComponent for the visible boat hull */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boat|Components")
     UStaticMeshComponent* HullMesh;
@@ -73,6 +80,8 @@ public:
     TScriptInterface<IWaterSurface> WaterSurface;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boat|Ocean")
     AOceanActor* OceanActor;
+
+    TSharedPtr<IBoatRudder> BoatRudder;
 
 protected:
     UPROPERTY(VisibleAnywhere)
@@ -97,6 +106,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
     float Acceleration = 1000;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Boat|Debug")
+    float TurnTorque = 1000;
+
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     UInputMappingContext* IMC_Boat;
 
@@ -105,7 +117,18 @@ protected:
     UInputAction* IA_ToggleBuoyancyDebug;
     UInputAction* IA_ToggleStatistics;
     UInputAction* IA_ToggleViscoscity;
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* IA_MoveForward;
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* IA_MoveRight;
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* IA_MoveLeft;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* IA_Throttle;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    UInputAction* IA_Steer;
     UPROPERTY(EditDefaultsOnly, Category = "Boat|Viscoscity", meta = (ClampMin = "-1.0", ClampMax = "0.0", UIMin = "-1.0", UIMax = "0.0"))
     float ForwardTrianglesKFactor{ -0.5 };
 

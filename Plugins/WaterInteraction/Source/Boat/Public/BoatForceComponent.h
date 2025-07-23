@@ -9,6 +9,7 @@
 #include "IForceProvider.h"
 #include "ForceProviderBase.h"
 #include "IForceCommand.h"
+#include "BoatRealTimeVertexProvider.h"
 #include "BoatForceComponent.generated.h"
 
 
@@ -33,13 +34,13 @@ public:
     UStaticMeshComponent* HullMesh = nullptr; //Assign at the start of sim from the boat pawn.
     TScriptInterface<IWaterSurface> WaterSurface; //Assign at the start of sim from Boat pawn
     ABoatDebugHUD* DebugHUD;
-
+    TSharedPtr<IBoatRealTimeVertexProvider> BoatVertexProvider; // This is used to calculate the global hull triangles and rudder transform
 private:
-    TriangleInfoList LocalHullTriangles; //Assign at the start of sim. This can be derived from HullMesh. Not Needed
+   // TriangleInfoList LocalHullTriangles; //Assign at the start of sim. This can be derived from HullMesh. Not Needed
     //FTransform BoatTransform; //Assign at the start of sim. Not needed since it can be derived from the owner.
     //FVector BoatCenterOfMass; //Can be derived from Hull Mesh. Not needed
     //ABoatDebugHUD* DebugHUD; //Get from world. Not needed
-    TArray<PolyInfo> HullPolys;
+   // TArray<PolyInfo> HullPolys;
 
 
     // Where providers dump their commands each frame
@@ -47,12 +48,12 @@ private:
 
     // your active providers
 
-    TArray<FVector> LocalVertices;
-    TArray<uint32> LocalIndices;
-    TArray<FVector> LocalNormals;
+    //TArray<FVector> LocalVertices;
+    //TArray<uint32> LocalIndices;
+    //TArray<FVector> LocalNormals;
 
-    void CalculateGlobalHullTriangles(TriangleInfoList& globalHullTriangles) const;
-    void CalcLocalVerticesData(); //not const since it updates local verts data. To be run only once.
+    //void CalculateGlobalHullTriangles(TriangleInfoList& globalHullTriangles) const;
+    //void CalcLocalVerticesData(); //not const since it updates local verts data. To be run only once.
 
 public:
     UPROPERTY(EditAnywhere, Instanced, Category = "Forces")

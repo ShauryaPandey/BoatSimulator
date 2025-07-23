@@ -92,17 +92,17 @@ namespace ForceProviderHelpers
         
         FVector forceDir = (edge0 ^ edge1).GetSafeNormal();
         //forceDir = -forceDir; //Normal of the triangle calculated this way is projecting inwards
-        if (ShouldDrawDebug)
-        {
-            DrawDebugSphere(World, Poly.gCentroid, 10.f, 8, FColor::Red, false,0,2.0f);
-            //Add debug for force Direction
-            DrawDebugDirectionalArrow(
-                World,
-                Poly.gCentroid,
-                Poly.gCentroid + forceDir * 100.0f,
-                12.0f, FColor::Yellow, false, 2.0f, 0,2.0f
-            );
-        }
+        //if (ShouldDrawDebug)
+        //{
+        //    DrawDebugSphere(World, Poly.gCentroid, 10.f, 8, FColor::Red, false,0,2.0f);
+        //    //Add debug for force Direction
+        //    DrawDebugDirectionalArrow(
+        //        World,
+        //        Poly.gCentroid,
+        //        Poly.gCentroid + forceDir * 100.0f,
+        //        12.0f, FColor::Yellow, false, 2.0f, 0,2.0f
+        //    );
+        //}
         return forceDir;
     }
 
@@ -241,7 +241,7 @@ namespace ForceProviderHelpers
         return true;
     }
 
-    FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo, FVector waterVelocity, const UStaticMeshComponent* hullMesh, UWorld* world, bool shouldDrawDebug)
+    FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo, FVector waterVelocity, const UStaticMeshComponent* hullMesh,const UWorld* world, bool shouldDrawDebug)
     {
         check(world != nullptr);
        
@@ -286,6 +286,7 @@ namespace ForceProviderHelpers
             return FVector{};
         }
         FVector boatVelocity = hullMesh->GetComponentVelocity() * UU_TO_M;
+        UE_LOG(LogTemp, Log, TEXT("Boat Velocity : %f"), boatVelocity.Size());
         //Get Boat Angular Velocity
         FVector boatAngularVelocity = hullMesh->GetPhysicsAngularVelocityInRadians();
         //Get Boat Center of Gravity

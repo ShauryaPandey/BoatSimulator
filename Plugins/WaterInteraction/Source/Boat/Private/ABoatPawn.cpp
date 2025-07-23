@@ -11,8 +11,17 @@
 #include "EngineUtils.h"
 #include "Camera/CameraActor.h"
 #include "ForceProviderHelpers.h"
+#include "BoatMeshManager.h"
 
-ABoatPawn::ABoatPawn()
+ABoatPawn::ABoatPawn() : Super()
+, ShouldDrawDebug(false)
+, ShouldDrawBuoyancyDebug(false)
+, ShouldDrawViscoscityDebug(false)
+, ShouldDrawPressureDragDebug(false)
+, ShouldDrawStatisticsDebug(false)
+, Acceleration(1000.0f)
+, TurnTorque(10000.0f)
+, HullMesh{ CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HullMesh")) }
 {
     // Enable ticking so we can update buoyancy/physics each frame
     PrimaryActorTick.bCanEverTick = true;
@@ -22,7 +31,7 @@ ABoatPawn::ABoatPawn()
     RootComponent = BoatRoot;
 
     // Create the hull mesh and attach it to the BoatRoot
-    HullMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HullMesh"));
+    //HullMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HullMesh"));
     HullMesh->SetupAttachment(RootComponent);
 
     BoatForceComponent = CreateDefaultSubobject<UBoatForceComponent>(TEXT("BoatForces"));
@@ -38,8 +47,12 @@ ABoatPawn::ABoatPawn()
     IA_ToggleBuoyancyDebug = nullptr;
     IA_ToggleStatistics = nullptr;
     IA_ToggleViscoscity = nullptr;
+    IA_MoveForward = nullptr;
+    IA_MoveRight = nullptr;
+    IA_MoveLeft = nullptr;
 
     AutoPossessPlayer = EAutoReceiveInput::Player0;
+
 }
 
 /// <summary>
@@ -66,6 +79,26 @@ void ABoatPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
             this,
             &ABoatPawn::ToggleBuoyancyDebug
         );
+        /*  EIC->BindAction(
+              IA_MoveForward,
+              ETriggerEvent::Triggered ,
+              this,
+              &ABoatPawn::MoveBoatForward
+          );
+          EIC->BindAction(
+              IA_MoveRight,
+              ETriggerEvent::Triggered,
+              this,
+              &ABoatPawn::TurnBoatRight
+          );
+          EIC->BindAction(
+              IA_MoveLeft,
+              ETriggerEvent::Triggered,
+              this,
+              &ABoatPawn::TurnBoatLeft
+          );*/
+        EIC->BindAction(IA_Throttle, ETriggerEvent::Triggered, this, &ABoatPawn::Throttle);
+        EIC->BindAction(IA_Steer, ETriggerEvent::Triggered, this, &ABoatPawn::Steer);
     }
 
 }
@@ -91,6 +124,71 @@ void ABoatPawn::ToggleBuoyancyDebug()
         FlushPersistentDebugLines(GetWorld());
     }
 }
+
+void ABoatPawn::MoveBoatForward()
+{
+    auto boatForwardDirection = HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::Y);
+    boatForwardDirection.Z = 0;
+    boatForwardDirection.Normalize();
+    HullMesh->AddForce(boatForwardDirection * HullMesh->GetMass() * Acceleration);
+}
+
+void ABoatPawn::TurnBoatRight()
+{
+    HullMesh->GetUpVector();
+    HullMesh->AddTorqueInDegrees(FVector(0, 0, TurnTorque));
+}
+
+void ABoatPawn::TurnBoatLeft()
+{
+    HullMesh->AddTorqueInDegrees(FVector(0, 0, -TurnTorque));
+}
+
+void ABoatPawn::Throttle(const FInputActionValue& Value)
+{
+    float AxisValue = Value.Get<float>();
+    if (FMath::IsNearlyZero(AxisValue)) return;
+
+    FVector Forw = HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::Y);
+    Forw.Z = 0;
+    Forw.Normalize();
+    HullMesh->AddForce(Forw * AxisValue * Acceleration * HullMesh->GetMass());
+}
+
+void ABoatPawn::Steer(const FInputActionValue& Value)
+{
+    float AxisValue = Value.Get<float>();
+
+    // Early out if tiny
+    if (FMath::IsNearlyZero(AxisValue)) return;
+
+    // Compute rudder position as above
+    //const FBoxSphereBounds& LocalBounds = HullMesh->GetStaticMesh()->GetBounds();
+    //float HalfLengthY = LocalBounds.BoxExtent.Y * HullMesh->GetComponentScale().Y;
+    //
+    //FVector LocalRudderOffset(0.f, -HalfLengthY, LocalBounds.BoxExtent.Z);
+    FVector RudderWorldPos = BoatRudder->GetRudderTransform();
+   
+    DrawDebugSphere(
+        GetWorld(),
+        RudderWorldPos,
+        10.f,
+        12,
+        FColor::Red,
+        false, 0.1f);
+    // Local lateral (right) direction we want to push to turn
+    // AxisValue in [-1,1]: positive = turn right push left at stern (local -X), etc.
+    FVector LocalForceDir(-AxisValue, 0.f, 0.f);   // force sideways
+    LocalForceDir.Normalize();
+
+    // Convert local force direction to world
+    FVector WorldForceDir = HullMesh->GetComponentTransform().TransformVectorNoScale(LocalForceDir);
+
+    HullMesh->AddForceAtLocation(WorldForceDir * TurnTorque, RudderWorldPos);
+   // localTotalTorque += FVector::CrossProduct(HullMesh->GetCenterOfMass(), polyForce);
+    //HullMesh->AddTorqueInRadians()
+}
+
 
 void ABoatPawn::BeginPlay()
 {
@@ -120,6 +218,9 @@ void ABoatPawn::BeginPlay()
         BoatForceComponent->WaterSurface = WaterSurface;
     }
 
+    BoatRudder = MakeShared<BoatMeshManager>(HullMesh);
+    ensure(BoatRudder != nullptr);
+    BoatForceComponent->BoatVertexProvider = StaticCastSharedPtr<BoatMeshManager>(BoatRudder);
     //Link the player controller with the Input Mapping Context - This is needed to be able to debug via visualizers or log tables
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {

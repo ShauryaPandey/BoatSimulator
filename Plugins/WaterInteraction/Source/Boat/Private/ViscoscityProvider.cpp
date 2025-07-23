@@ -5,119 +5,124 @@
 #include "ForceProviderHelpers.h"
 #include "BoatDebugHUD.h"
 
+FString UViscoscityProvider::GetForceProviderName() const
+{
+    return FString("Viscosity");
+}
 /// <summary>
 /// This function calculates the total forces applying on the triangles of the boat and add the forces, torque to the command queue.
 /// </summary>
 /// <param name="context"></param>
 /// <param name="outQueue"></param>
-void UViscoscityProvider::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& forceComponentMutex)
-{
-    check(context.HullMesh != nullptr);
-    if (context.HullMesh == nullptr)
-    {
-        return;
-    }
-    const float UU_TO_M = 0.01f;
-    const float M_TO_UU = 100.0f;
-    const float FluidDensity = 1025.0f;
+//void UViscoscityProvider::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& forceComponentMutex)
+//{
+//    check(context.HullMesh != nullptr);
+//    if (context.HullMesh == nullptr)
+//    {
+//        return;
+//    }
+//    const float UU_TO_M = 0.01f;
+//    const float M_TO_UU = 100.0f;
+//    const float FluidDensity = 1025.0f;
+//
+//    FVector totalForce, totalTorque;
+//    ensure(context.HullTriangles != nullptr);
+//    if (context.HullTriangles == nullptr)
+//    {
+//        return;
+//    }
+//
+//    TArray<UE::Tasks::FTask> TaskHandles;
+//
+//    int BatchSize = 100;
+//    int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
+//    if (context.HullTriangles->Items.Num() % BatchSize != 0)
+//    {
+//        NumBatches += 1; // if there is a remainder, we need one more batch
+//    }
+//
+//    for (int batchIndex = 0; batchIndex < NumBatches; ++batchIndex)
+//    {
+//        UE::Tasks::FTask task = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&, batchIndex]
+//            {
+//                FVector localTotalForce = FVector{}, localTotalTorque = FVector{};
+//                for (int idx = 0; idx < BatchSize; ++idx)
+//                {
+//                    if (batchIndex * BatchSize + idx >= context.HullTriangles->Items.Num())
+//                    {
+//                        break; // if we exceed the number of triangles, exit the loop
+//                    }
+//                    // Get the triangle at the current index in the batch
+//                    auto& triangle = context.HullTriangles->Items[batchIndex * BatchSize + idx];
+//                    PolyInfo polyInfo;
+//                    // 1) filter only submerged:
+//                    auto TriVertex1 = triangle.Vertex1;
+//                    auto TriVertex2 = triangle.Vertex2;
+//                    auto TriVertex3 = triangle.Vertex3;
+//
+//                    const FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f }, GetWorld()->TimeSeconds);
+//
+//                    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+//                    {
+//                        continue;
+//                    }
+//                    FVector viscousForce = ComputeViscousForce(polyInfo, context.World, context.HullMesh, context.WaterSurface, context.DebugHUD);
+//                    if (viscousForce == FVector{})
+//                    {
+//                        continue;
+//                    }
+//                    localTotalForce += viscousForce;
+//                    localTotalTorque += (polyInfo.gCentroid - context.HullMesh->GetCenterOfMass()).RotateAngleAxis(0, FVector::UpVector).operator^(viscousForce);
+//                }
+//                Mutex.Lock();
+//                totalForce += localTotalForce;
+//                totalTorque += localTotalTorque;
+//                Mutex.Unlock();
+//            });
+//        TaskHandles.Add(task);
+//    }
+//    for (auto& triangle : context.HullTriangles->Items)
+//    {
+//        // filter by speed & depth
+//        PolyInfo polyInfo;
+//        // 1) filter only submerged:
+//        auto TriVertex1 = triangle.Vertex1;
+//        auto TriVertex2 = triangle.Vertex2;
+//        auto TriVertex3 = triangle.Vertex3;
+//
+//        //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
+//        FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
+//
+//        if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
+//        {
+//            continue;
+//        }
+//        FVector viscousForce = ComputeViscousForce(polyInfo, context.World, context.HullMesh, context.WaterSurface, context.DebugHUD);
+//        if (viscousForce == FVector{})
+//        {
+//            continue;
+//        }
+//        totalForce += viscousForce;
+//        totalTorque += (polyInfo.gCentroid - context.HullMesh->GetCenterOfMass()).RotateAngleAxis(0, FVector::UpVector).operator^(viscousForce);
+//    }
+//
+//    UE::Tasks::FTask FinalTask = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&]()
+//        {
+//            forceComponentMutex.Lock();
+//            if (context.DebugHUD != nullptr)
+//            {
+//                auto totalForceInNewton = totalForce / 100.0f;
+//                context.DebugHUD->SetStat("Total ViscouseForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+//            }
+//
+//            outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
+//            outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
+//            forceComponentMutex.Unlock();
+//        }, UE::Tasks::Prerequisites(TaskHandles));
+//
+//    FinalTask.Wait();
+//}
 
-    FVector totalForce, totalTorque;
-    ensure(context.HullTriangles != nullptr);
-    if (context.HullTriangles == nullptr)
-    {
-        return;
-    }
-
-    TArray<UE::Tasks::FTask> TaskHandles;
-
-    int BatchSize = 100;
-    int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
-    if (context.HullTriangles->Items.Num() % BatchSize != 0)
-    {
-        NumBatches += 1; // if there is a remainder, we need one more batch
-    }
-
-    for (int batchIndex = 0; batchIndex < NumBatches; ++batchIndex)
-    {
-        UE::Tasks::FTask task = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&, batchIndex]
-            {
-                FVector localTotalForce = FVector{}, localTotalTorque = FVector{};
-                for (int idx = 0; idx < BatchSize; ++idx)
-                {
-                    if (batchIndex * BatchSize + idx >= context.HullTriangles->Items.Num())
-                    {
-                        break; // if we exceed the number of triangles, exit the loop
-                    }
-                    // Get the triangle at the current index in the batch
-                    auto& triangle = context.HullTriangles->Items[batchIndex * BatchSize + idx];
-                    PolyInfo polyInfo;
-                    // 1) filter only submerged:
-                    auto TriVertex1 = triangle.Vertex1;
-                    auto TriVertex2 = triangle.Vertex2;
-                    auto TriVertex3 = triangle.Vertex3;
-
-                    const FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f }, GetWorld()->TimeSeconds);
-
-                    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
-                    {
-                        continue;
-                    }
-                    FVector viscousForce = ComputeViscousForce(polyInfo, context.World, context.HullMesh, context.WaterSurface, context.DebugHUD);
-                    if (viscousForce == FVector{})
-                    {
-                        continue;
-                    }
-                    localTotalForce += viscousForce;
-                    localTotalTorque += (polyInfo.gCentroid - context.HullMesh->GetCenterOfMass()).RotateAngleAxis(0, FVector::UpVector).operator^(viscousForce);
-                }
-                Mutex.Lock();
-                totalForce += localTotalForce;
-                totalTorque += localTotalTorque;
-                Mutex.Unlock();
-            });
-        TaskHandles.Add(task);
-    }
-    //for (auto& triangle : context.HullTriangles->Items)
-    //{
-    //    // filter by speed & depth
-    //    PolyInfo polyInfo;
-    //    // 1) filter only submerged:
-    //    auto TriVertex1 = triangle.Vertex1;
-    //    auto TriVertex2 = triangle.Vertex2;
-    //    auto TriVertex3 = triangle.Vertex3;
-
-    //    //FWaterSample waterSample = context.WaterSurface->QueryHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f });
-    //    FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f },GetWorld()->TimeSeconds);
-
-    //    if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
-    //    {
-    //        continue;
-    //    }
-    //    FVector viscousForce = ComputeViscousForce(polyInfo, context.World, context.HullMesh, context.WaterSurface, context.DebugHUD);
-    //    if (viscousForce == FVector{})
-    //    {
-    //        continue;
-    //    }
-    //    totalForce += viscousForce;
-    //    totalTorque += (polyInfo.gCentroid - context.HullMesh->GetCenterOfMass()).RotateAngleAxis(0, FVector::UpVector).operator^(viscousForce);
-    //}
-
-    UE::Tasks::FTask FinalTask = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&]()
-        {
-            forceComponentMutex.Lock();
-            if (context.DebugHUD != nullptr)
-            {
-                auto totalForceInNewton = totalForce / 100.0f;
-                context.DebugHUD->SetStat("Total ViscouseForce", totalForceInNewton.Size()); //Put all debug variables into DebugHUD
-            }
-
-            outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
-            outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
-            forceComponentMutex.Unlock();
-        }, UE::Tasks::Prerequisites(TaskHandles));
-
-    FinalTask.Wait();
-}
 
 /// <summary>
 /// This function calculates the Reynolds number that is essential to calculating the viscoscity
@@ -217,12 +222,12 @@ float UViscoscityProvider::CalculateReynoldsNumber(const UStaticMeshComponent* h
 /// <param name="hullMesh"></param>
 /// <param name="waterSurface"></param>
 /// <returns></returns>
-FVector UViscoscityProvider::ComputeViscousForce(const PolyInfo& info, UWorld* world, const UStaticMeshComponent* hullMesh, const TScriptInterface<IWaterSurface> waterSurface, const ABoatDebugHUD* debugHUD) const
+FVector UViscoscityProvider::ComputeForce(const PolyInfo* info, IForceContext context) const
 {
     const float UU_TO_M = 0.01f;
     const float M_TO_UU = 100.0f;
     const float FluidDensity = 1025.0f;
-    const float ReynoldsNumber = CalculateReynoldsNumber(hullMesh,waterSurface);
+    const float ReynoldsNumber = CalculateReynoldsNumber(context.HullMesh ,context.WaterSurface);
     const float KFactor = 1.4f;/*CalculateIntegratedKFactorForBoat(polyList);*/
     
     if (ReynoldsNumber <= KINDA_SMALL_NUMBER)
@@ -231,9 +236,9 @@ FVector UViscoscityProvider::ComputeViscousForce(const PolyInfo& info, UWorld* w
     }
  
     const float forceConstant = 0.5f * FluidDensity * 0.075f / FMath::Square((FMath::LogX(10, ReynoldsNumber) - 2)); //To-Do : Move out of this function
-    check(world != nullptr);
+    check(context.World != nullptr);
     //Calculation of viscous force
-    FVector forceDir = ForceProviderHelpers::CalculateForceDirectionOnPoly(info,debugHUD->ShouldDrawDebug, world); //This is the force applied on the poly
+    FVector forceDir = ForceProviderHelpers::CalculateForceDirectionOnPoly(*info,context.DebugHUD->ShouldDrawDebug, context.World); //This is the force applied on the poly
 
     //If it is an inside poly then ignore
     if (FVector::DotProduct(forceDir, FVector::UpVector) < 0.0f)
@@ -242,8 +247,8 @@ FVector UViscoscityProvider::ComputeViscousForce(const PolyInfo& info, UWorld* w
     }
 
     //auto waterSample = waterSurface->QueryHeightAt(FVector2D{ info.gCentroid.X, info.gCentroid.Y });
-    auto waterSample = waterSurface->SampleHeightAt(FVector2D{ info.gCentroid.X, info.gCentroid.Y },world->TimeSeconds);
-    float depth_uu = waterSample.Position.Z - info.gCentroid.Z;
+    auto waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ info->gCentroid.X, info->gCentroid.Y },context.World->TimeSeconds);
+    float depth_uu = waterSample.Position.Z - info->gCentroid.Z;
     //If the poly is above water height then ignore
     if (depth_uu <= 0)
     {
@@ -251,22 +256,22 @@ FVector UViscoscityProvider::ComputeViscousForce(const PolyInfo& info, UWorld* w
     }
 
     float forceMagnitude = forceConstant;
-    forceMagnitude *= info.Area * UU_TO_M * UU_TO_M;
+    forceMagnitude *= info->Area * UU_TO_M * UU_TO_M;
     //Calculate Relative velocity of flow at this poly
 
-    FVector tangentialVelocity = ForceProviderHelpers::CalculateRelativeVelocityOfFlowAtPolyCenter(info,waterSurface->GetWaterVelocity(),hullMesh,world, debugHUD->ShouldDrawViscoscityDebug);
+    FVector tangentialVelocity = ForceProviderHelpers::CalculateRelativeVelocityOfFlowAtPolyCenter(*info,context.WaterSurface->GetWaterVelocity(),context.HullMesh,context.World, context.DebugHUD->ShouldDrawViscoscityDebug);
     check(!tangentialVelocity.ContainsNaN());
     auto tangentialVelocitySize = tangentialVelocity.Size();
-
+    UE_LOG(LogTemp, Log, TEXT("TangentialVelocity : %f"), tangentialVelocitySize);
     forceMagnitude *= tangentialVelocitySize;
     FVector viscousForce = tangentialVelocity * forceMagnitude * (KFactor)*M_TO_UU; //KFactor is actually 1 + K because tha
-    if (debugHUD->ShouldDrawViscoscityDebug)
-    {
-        DrawDebugSphere(world, info.gCentroid, 2.f, 8, FColor::Red, false, 0.1f, 5);
-        //Add debug for force Direction
-        DrawDebugDirectionalArrow(world, info.gCentroid,
-            info.gCentroid + viscousForce * 0.1f, 12.0f, FColor::Magenta, false, 0.1f, 0, 1.0f);
-    }
+    //if (context.DebugHUD->ShouldDrawViscoscityDebug)
+    //{
+    //    DrawDebugSphere(context.World, info->gCentroid, 2.f, 8, FColor::Red, false, 0.1f, 5);
+    //    //Add debug for force Direction
+    //    DrawDebugDirectionalArrow(context.World, info->gCentroid,
+    //        info->gCentroid + viscousForce * 0.1f, 12.0f, FColor::Magenta, false, 0.1f, 0, 1.0f);
+    //}
     return viscousForce;
 }
 // <summary>
