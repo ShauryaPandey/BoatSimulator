@@ -78,7 +78,7 @@ public:
     TArray<uint32> LocalIndices;
     TArray<FVector> LocalNormals;
     TScriptInterface<IWaterSurface> WaterSurface;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boat|Ocean")
+    //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boat|Ocean")
     AOceanActor* OceanActor;
 
     TSharedPtr<IBoatRudder> BoatRudder;

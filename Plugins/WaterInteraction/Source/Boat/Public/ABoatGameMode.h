@@ -9,4 +9,6 @@ class BOAT_API ABoatGameMode : public AGameModeBase
     GENERATED_BODY()
 public:
     ABoatGameMode();
+
+    virtual void BeginPlay() override;
 };
