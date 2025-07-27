@@ -107,32 +107,69 @@ void ABoatPawn::ToggleBuoyancyDebug()
 
 void ABoatPawn::MoveBoatForward()
 {
-    auto boatForwardDirection = HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::Y);
+    constexpr float UU_TO_M = 0.01f;
+    FVector boatForwardDirection;
+    switch (EForwardAxis)
+    {
+    case EBoatForwardAxis::PositiveX:
+    {
+        boatForwardDirection = HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::X);
+        break;
+    }
+    case EBoatForwardAxis::NegativeX:
+    {
+        boatForwardDirection = -1.0f * HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::X);
+        break;
+    }
+    case EBoatForwardAxis::PositiveY:
+    {
+        boatForwardDirection = HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::Y);
+        break;
+    }
+    case EBoatForwardAxis::NegativeY:
+    {
+        boatForwardDirection = -1.0f * HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::Y);
+        break;
+    }
+    }
     boatForwardDirection.Z = 0;
     boatForwardDirection.Normalize();
-    HullMesh->AddForce(boatForwardDirection * HullMesh->GetMass() * Acceleration);
+    if (HullMesh->GetComponentVelocity().Size() * UU_TO_M < MaxVelocity)
+    {
+        HullMesh->AddForce(boatForwardDirection * HullMesh->GetMass() * Acceleration);
+    }
 }
 
 void ABoatPawn::TurnBoatRight()
 {
-    HullMesh->GetUpVector();
-    HullMesh->AddTorqueInDegrees(FVector(0, 0, TurnTorque));
+    if(HullMesh->GetPhysicsAngularVelocityInDegrees().Size() < MaxAngularVelocity)
+    {
+        HullMesh->AddTorqueInDegrees(FVector(0, 0, TurnTorque));
+    }
 }
 
 void ABoatPawn::TurnBoatLeft()
 {
-    HullMesh->AddTorqueInDegrees(FVector(0, 0, -TurnTorque));
+    if (HullMesh->GetPhysicsAngularVelocityInDegrees().Size() < MaxAngularVelocity)
+    {
+        HullMesh->AddTorqueInDegrees(FVector(0, 0, -TurnTorque));
+    }
 }
 
 void ABoatPawn::Throttle(const FInputActionValue& Value)
 {
+    constexpr float UU_TO_M = 0.01f;
     float AxisValue = Value.Get<float>();
     if (FMath::IsNearlyZero(AxisValue)) return;
 
-    FVector Forw = HullMesh->GetComponentTransform().GetUnitAxis(EAxis::Type::Y);
+    FVector Forw = GetBoatForwardDirection();
     Forw.Z = 0;
     Forw.Normalize();
-    HullMesh->AddForce(Forw * AxisValue * Acceleration * HullMesh->GetMass());
+   
+    if (HullMesh->GetComponentVelocity().Size() * UU_TO_M < MaxVelocity)
+    {
+        HullMesh->AddForce(Forw * AxisValue * Acceleration * HullMesh->GetMass());
+    }
 }
 
 void ABoatPawn::Steer(const FInputActionValue& Value)
@@ -156,9 +193,31 @@ void ABoatPawn::Steer(const FInputActionValue& Value)
         12,
         FColor::Red,
         false, 0.1f);
-    // Local lateral (right) direction we want to push to turn
-    // AxisValue in [-1,1]: positive = turn right push left at stern (local -X), etc.
-    FVector LocalForceDir(-AxisValue, 0.f, 0.f);   // force sideways
+    FVector LocalForceDir;   // force sideways
+    switch (EForwardAxis)
+    {
+    case EBoatForwardAxis::PositiveY:
+    {
+        LocalForceDir = { -AxisValue, 0.f, 0.f };
+        break;
+    }
+    case EBoatForwardAxis::NegativeY:
+    {
+        LocalForceDir = { AxisValue, 0.f, 0.f };
+        break;
+    }
+    case EBoatForwardAxis::PositiveX:
+    {
+        LocalForceDir = { 0.0f, -AxisValue, 0.f };
+        break;
+    }
+    case EBoatForwardAxis::NegativeX:
+    {
+        LocalForceDir = { 0.0f, AxisValue, 0.f };
+        break;
+    }
+    }
+
     LocalForceDir.Normalize();
 
     // Convert local force direction to world
@@ -208,7 +267,7 @@ void ABoatPawn::BeginPlay()
         BoatForceComponent->WaterSurface = WaterSurface;
     }
 
-    BoatRudder = MakeShared<BoatMeshManager>(HullMesh);
+    BoatRudder = MakeShared<BoatMeshManager>(HullMesh, [this]() {return static_cast<uint8>(this->EForwardAxis); });
     ensure(BoatRudder != nullptr);
     BoatForceComponent->BoatVertexProvider = StaticCastSharedPtr<BoatMeshManager>(BoatRudder);
     //Link the player controller with the Input Mapping Context - This is needed to be able to debug via visualizers or log tables

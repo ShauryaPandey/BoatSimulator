@@ -1,6 +1,7 @@
 // ViscosityProvider.h
 #pragma once
 #include "CoreMinimal.h"
+#include "Misc/Optional.h"
 #include "IForceProvider.h"
 #include "ForceProviderBase.h"
 #include "ViscoscityProvider.generated.h"
@@ -17,4 +18,7 @@ public:
     virtual FString GetForceProviderName() const override;
 private:
     float CalculateReynoldsNumber(const UStaticMeshComponent* hullMesh, const TScriptInterface<IWaterSurface> waterSurface) const;
+    //const float forceConstant;/* = 0.5f * FluidDensity * 0.075f / FMath::Square((FMath::LogX(10, ReynoldsNumber) - 2));*/ //To-Do : Move out of this function
+    mutable TOptional<float> ReynoldsNumber; // Store the Reynolds number to avoid recalculating it every time
+    mutable TOptional<float> ForceConstant;
 };

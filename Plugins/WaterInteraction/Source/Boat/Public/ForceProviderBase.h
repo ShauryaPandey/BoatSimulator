@@ -12,7 +12,7 @@ class BOAT_API UForceProviderBase : public UObject, public IForceProvider
     GENERATED_BODY()
     // …
 public:
-    void ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex /*For accessing thread unsafe unstructures from context*/);
+    static void ContributeForces(TArray<UForceProviderBase*>& forceProviders ,IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex /*For accessing thread unsafe unstructures from context*/);
 
     virtual bool GetFilteredPolygon(const TriangleInfo& triangle, PolyInfo& outPoly, const FWaterSample& waterSample) const;
 

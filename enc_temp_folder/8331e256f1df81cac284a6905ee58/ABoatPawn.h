@@ -105,6 +105,13 @@ public:
     /** Root scene component*/
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boat|Components")
     USceneComponent* BoatRoot;
+    /** Example function you might call from Blueprints */
+   // UFUNCTION(BlueprintCallable, Category = "Boat|Actions")
+    //void CalcLocalVerticesData();
+    //void StartBuoyancy();
+
+    //void ClipTriangleAgainstWater(FVector vertex1, FVector vertex2, FVector vertex3, PolyPointsContainer& outPointsContainer, const FWaterSample& waterSample) const;
+    //FVector ApplyBuoyantForce(const PolyInfo& Poly);
 
     TArray<FVector> LocalVertices;
     TArray<uint32> LocalIndices;
@@ -178,5 +185,9 @@ protected:
 
 private:
     float CalculateIntegratedKFactorForBoat(const PolyInfoList& polyList);
+    /* FVector CalculatePolyVelocity(const PolyInfo& poly) const;
+     void ApplyViscoscity(const PolyInfoList& polyList);
+     float CalculateReynoldsNumber() const;
+     FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo) const;*/
     ABoatDebugHUD* DebugHUD;
 };

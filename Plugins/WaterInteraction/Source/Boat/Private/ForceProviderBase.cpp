@@ -8,8 +8,9 @@ bool UForceProviderBase::GetFilteredPolygon(const TriangleInfo& triangle, PolyIn
 }
 
 
-void UForceProviderBase::ContributeForces(IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex)
+void UForceProviderBase::ContributeForces(TArray<UForceProviderBase*>& forceProviders, IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UForceProviderBase::ContributeForces);
     check(context.HullMesh != nullptr);
     if (context.HullMesh == nullptr)
     {
@@ -24,8 +25,26 @@ void UForceProviderBase::ContributeForces(IForceContext context, TArray<FCommand
     }
     TArray<UE::Tasks::FTask> TaskHandles;
 
-    int BatchSize = 100;
-    int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
+    //int BatchSize = 100;
+    //int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
+    int NumBatches;
+    int BatchSize;
+    if (context.HullTriangles->Items.Num() <= 5000)
+    {
+        NumBatches = FPlatformMisc::NumberOfCores();
+        BatchSize = context.HullTriangles->Items.Num() / NumBatches;
+    }
+    else if (context.HullTriangles->Items.Num() > 5000 && context.HullTriangles->Items.Num() < 8000)
+    {
+        NumBatches = FPlatformMisc::NumberOfCores() * 2;
+        BatchSize = context.HullTriangles->Items.Num() / NumBatches;
+    }
+    else
+    {
+        NumBatches = FPlatformMisc::NumberOfCores() * 3;
+        BatchSize = context.HullTriangles->Items.Num() / NumBatches;
+    }
+
     if (context.HullTriangles->Items.Num() % BatchSize != 0)
     {
         NumBatches += 1; // if there is a remainder, we need one more batch
@@ -50,42 +69,47 @@ void UForceProviderBase::ContributeForces(IForceContext context, TArray<FCommand
                     auto TriVertex2 = triangle.Vertex2;
                     auto TriVertex3 = triangle.Vertex3;
 
-                    const FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f }, GetWorld()->TimeSeconds);
+                    const FWaterSample waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ (TriVertex1.X + TriVertex2.X + TriVertex3.X) / 3.0f,(TriVertex1.Y + TriVertex2.Y + TriVertex3.Y) / 3.0f }, context.World->TimeSeconds);
 
                     if (!ForceProviderHelpers::GetSubmergedPolygon(triangle, polyInfo, waterSample))
                     {
                         continue;
                     }
-
-                    FVector polyForce = ComputeForce(&polyInfo, context);
-                    localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
-                    localTotalForce += polyForce;
+                    for (UForceProviderBase* provider : forceProviders)
+                    {
+                        FVector polyForce = provider->ComputeForce(&polyInfo, context);
+                        localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
+                        localTotalForce += polyForce;
+                    }
+                    //FVector polyForce = ComputeForce(&polyInfo, context);
+                    //localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
+                    //localTotalForce += polyForce;
                 }
-                forceProviderMutex.Lock();
+                Mutex.Lock();
                 totalForce += localTotalForce;
                 totalTorque += localTotalTorque;
-                forceProviderMutex.Unlock();
+                Mutex.Unlock();
             });
         TaskHandles.Add(task);
     }
 
     UE::Tasks::FTask FinalTask = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&]()
         {
-            Mutex.Lock();
-            if (context.DebugHUD != nullptr)
-            {
-                auto totalForceInNewton = totalForce / 100.0f;
-                FString providerName = GetForceProviderName();
-                FString totalForceText = FString::Printf(TEXT("Total %s Force"), *providerName);
-                FString totalTorqueText = FString::Printf(TEXT("Total %s Torque"), *providerName);
-                context.DebugHUD->SetStat(totalForceText, totalForceInNewton.Size()); //Put all debug variables into DebugHUD
-                context.DebugHUD->SetStat(totalTorqueText, totalTorque.Size());
-            }
+            //Mutex.Lock();
+            //if (context.DebugHUD != nullptr)
+            //{
+            //    auto totalForceInNewton = totalForce / 100.0f;
+            //    FString providerName = GetForceProviderName();
+            //    FString totalForceText = FString::Printf(TEXT("Total %s Force"), *providerName);
+            //    FString totalTorqueText = FString::Printf(TEXT("Total %s Torque"), *providerName);
+            //    context.DebugHUD->SetStat(totalForceText, totalForceInNewton.Size()); //Put all debug variables into DebugHUD
+            //    context.DebugHUD->SetStat(totalTorqueText, totalTorque.Size());
+            //}
             // 3) enqueue a command
             //Out queue is shared between multiple providers
             outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
             outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
-            Mutex.Unlock();
+            //Mutex.Unlock();
 
         }, UE::Tasks::Prerequisites(TaskHandles)); // Wait for all tasks to complete
     FinalTask.Wait(); // Wait for the final task to complete

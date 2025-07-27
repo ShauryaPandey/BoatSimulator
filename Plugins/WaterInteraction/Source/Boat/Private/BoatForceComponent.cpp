@@ -34,6 +34,7 @@ void UBoatForceComponent::BeginPlay()
 
 void UBoatForceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UBoatForceComponent::TickComponent);
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
     if (WaterSurface.GetInterface() == nullptr)
     {
@@ -47,9 +48,11 @@ void UBoatForceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
     // ask each provider to append commands
     ForceQueue.Empty();
 
-    ParallelFor(_Providers.Num(), [&](int32_t idx) {
-        _Providers[idx]->ContributeForces(forceContext, ForceQueue,BoatForceComponentMutex);
-        });
+    //ParallelFor(_Providers.Num(), [&](int32_t idx) {
+
+    //    /*_Providers[idx]->ContributeForces(forceContext, ForceQueue,BoatForceComponentMutex);*/
+    //    });
+    UForceProviderBase::ContributeForces(_Providers, forceContext, ForceQueue, BoatForceComponentMutex);
 
     ParallelFor(ForceQueue.Num(), [&](int32_t idx) {ForceQueue[idx]->Execute(HullMesh); });
     //Debug draw the force commands

@@ -45,31 +45,109 @@ void BoatMeshManager::CalculateGlobalHullTriangles(TriangleInfoList& globalHullT
 
 FVector BoatMeshManager::GetRudderTransform() const
 {
-   return HullMesh->GetComponentTransform().TransformPosition(RudderLocation); 
+    return HullMesh->GetComponentTransform().TransformPosition(RudderLocation);
 }
 
 void BoatMeshManager::CalcLocalRudderTransform()
 {
     //Need to know how the boat is oriented.
-    // Y Axis
-    float LowestYPosition{0.0f};
-    float LowestZPosition{0.0f};
-    float totalXPositions{0.0f};
-  
-    for (const auto& vert : LocalVertices)
+    Direction forwardDirection = getBoatForwardDirection(); // +/-  Y Axis,X Axis
+    switch (forwardDirection)
     {
-        if (vert.Y < LowestYPosition)
-        {
-            LowestYPosition = vert.Y;
-        }
-        if (vert.Z < LowestZPosition)
-        {
-            LowestZPosition = vert.Z;
-        }
-        totalXPositions += vert.X;
-    }
+    case PositiveX:
+    {
+        float LowestXPosition{ 0.0f };
+        float LowestZPosition{ 0.0f };
+        float totalYPositions{ 0.0f };
 
-    RudderLocation = FVector{ totalXPositions / LocalVertices.Num(),LowestYPosition,LowestZPosition };
+        for (const auto& vert : LocalVertices)
+        {
+            if (vert.X < LowestXPosition)
+            {
+                LowestXPosition = vert.X;
+            }
+            if (vert.Z < LowestZPosition)
+            {
+                LowestZPosition = vert.Z;
+            }
+            totalYPositions += vert.Y;
+        }
+
+        RudderLocation = FVector{ LowestXPosition, totalYPositions / LocalVertices.Num(), LowestZPosition };
+       
+        break;
+    }
+    case NegativeX:
+    {
+        float HighestXPosition{ 0.0f };
+        float LowestZPosition{ 0.0f };
+        float totalYPositions{ 0.0f };
+
+        for (const auto& vert : LocalVertices)
+        {
+            if (vert.X > HighestXPosition)
+            {
+                HighestXPosition = vert.X;
+            }
+            if (vert.Z < LowestZPosition)
+            {
+                LowestZPosition = vert.Z;
+            }
+            totalYPositions += vert.Y;
+        }
+
+        RudderLocation = FVector{ HighestXPosition, totalYPositions / LocalVertices.Num(), LowestZPosition };
+
+        break;
+    }
+    case PositiveY:
+    {
+        float LowestYPosition{ 0.0f };
+        float LowestZPosition{ 0.0f };
+        float totalXPositions{ 0.0f };
+
+        for (const auto& vert : LocalVertices)
+        {
+            if (vert.Y < LowestYPosition)
+            {
+                LowestYPosition = vert.Y;
+            }
+            if (vert.Z < LowestZPosition)
+            {
+                LowestZPosition = vert.Z;
+            }
+            totalXPositions += vert.X;
+        }
+
+        RudderLocation = FVector{ totalXPositions / LocalVertices.Num(),LowestYPosition,LowestZPosition };
+        break;
+    }
+    case NegativeY:
+    {
+        float HighestYPosition{ 0.0f };
+        float LowestZPosition{ 0.0f };
+        float totalXPositions{ 0.0f };
+
+        for (const auto& vert : LocalVertices)
+        {
+            if (vert.Y > HighestYPosition)
+            {
+                HighestYPosition = vert.Y;
+            }
+            if (vert.Z < LowestZPosition)
+            {
+                LowestZPosition = vert.Z;
+            }
+            totalXPositions += vert.X;
+        }
+        RudderLocation = FVector{ totalXPositions / LocalVertices.Num(), HighestYPosition, LowestZPosition };
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
 }
 
 void BoatMeshManager::CalcLocalVerticesData()
