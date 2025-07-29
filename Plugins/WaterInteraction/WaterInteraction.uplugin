@@ -7,12 +7,22 @@
   "Category": "Gameplay",
   "Modules": [
     {
-      "Name": "OceanSimulator",
+      "Name": "OceanSimulatorCore",
       "Type": "Runtime",
       "LoadingPhase": "Default"
     },
     {
-      "Name": "Boat",
+      "Name": "OceanSimulatorWrapper",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "BoatCore",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "BoatWrapper",
       "Type": "Runtime",
       "LoadingPhase": "Default"
     }
