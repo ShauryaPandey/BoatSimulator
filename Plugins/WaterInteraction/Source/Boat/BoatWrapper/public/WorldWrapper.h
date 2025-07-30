@@ -1,3 +1,4 @@
+#pragma once
 #include "CoreMinimal.h"
 #include "WorldAdaptor.h"
 #include "Engine/World.h"

@@ -1,3 +1,4 @@
+#pragma once
 #include "CoreMinimal.h"
 #include "MeshAdaptor.h"
 #include "Components/StaticMeshComponent.h"

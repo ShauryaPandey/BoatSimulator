@@ -6,15 +6,17 @@
 #include "WaterSample.h"
 #include "PolyInfo.h"
 #include "GerstnerWaveComponent.h"
+#include "PressureDragProviderCore.h"
 #include "PressureDragProvider.generated.h"
 
 UCLASS(Blueprintable, EditInlineNew)
-class UPressureDragProvider : public UForceProviderBase
+class UPressureDragProvider : public UForceProviderBase, public PressureDragProviderCore
 {
     GENERATED_BODY()
 public:
     virtual FVector ComputeForce(const PolyInfo* Poly, IForceContext context) const override;
     virtual FString GetForceProviderName() const override;
+    virtual void PostLoad() override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Provider Settings")
     float CPD1 = 0.2f;

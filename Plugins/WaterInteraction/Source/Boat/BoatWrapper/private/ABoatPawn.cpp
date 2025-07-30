@@ -84,6 +84,13 @@ void ABoatPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     }
 
 }
+void ABoatPawn::FellOutOfWorld(const UDamageType& DmgType)
+{
+    //SetActorTransform(RespawnTransform, false, nullptr, ETeleportType::ResetPhysics);
+    HullMesh->SetWorldTransform(RespawnTransform);
+    HullMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+    HullMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+}
 /// <summary>
 /// Based on input mapping to key (1), all debug functionality is toggled on/off
 /// </summary>
@@ -155,12 +162,12 @@ void ABoatPawn::Steer(const FInputActionValue& Value)
     }
     case EBoatForwardAxis::PositiveX:
     {
-        LocalForceDir = { 0.0f, -AxisValue, 0.f };
+        LocalForceDir = { 0.0f, AxisValue, 0.f };
         break;
     }
     case EBoatForwardAxis::NegativeX:
     {
-        LocalForceDir = { 0.0f, AxisValue, 0.f };
+        LocalForceDir = { 0.0f, -AxisValue, 0.f };
         break;
     }
     }
@@ -170,7 +177,11 @@ void ABoatPawn::Steer(const FInputActionValue& Value)
     // Convert local force direction to world
     FVector WorldForceDir = HullMesh->GetComponentTransform().TransformVectorNoScale(LocalForceDir);
 
-    HullMesh->AddForceAtLocation(WorldForceDir * TurnTorque, RudderWorldPos);
+
+    FVector r = RudderWorldPos - HullMesh->GetCenterOfMass();
+    FVector Torque = FVector::CrossProduct(r, WorldForceDir * TurnTorque);
+
+    HullMesh->AddTorqueInRadians(Torque);
 }
 
 
@@ -179,6 +190,7 @@ void ABoatPawn::BeginPlay()
     TRACE_BOOKMARK(TEXT("ABoatPawn::BeginPlay"));
     Super::BeginPlay();
 
+    RespawnTransform = HullMesh->GetComponentTransform();
     DebugHUD = Cast<ABoatDebugHUD>(
         GetWorld()->GetFirstPlayerController()->GetHUD());
     check(DebugHUD != nullptr);

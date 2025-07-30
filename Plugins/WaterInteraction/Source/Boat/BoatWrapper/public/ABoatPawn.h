@@ -46,6 +46,7 @@ protected:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
     virtual void SetupPlayerInputComponent(UInputComponent*) override;
+    virtual void FellOutOfWorld(const UDamageType& DmgType) override;
 public:
 
     // Called every frame, if ticking is enabled
@@ -164,4 +165,5 @@ protected:
 private:
     float CalculateIntegratedKFactorForBoat(const PolyInfoList& polyList);
     ABoatDebugHUD* DebugHUD;
+    FTransform RespawnTransform;
 };

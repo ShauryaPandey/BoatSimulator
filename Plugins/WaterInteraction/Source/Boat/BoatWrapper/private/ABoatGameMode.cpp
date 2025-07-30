@@ -24,7 +24,7 @@ void ABoatGameMode::BeginPlay()
     ensure(GI->SelectedBoatClass != nullptr);
     if (GI && GI->SelectedBoatClass)
     {
-        FVector SpawnLocation = FVector(6920.0f, 4740.0f, 820.0f);
+        FVector SpawnLocation = FVector(10460.0f, 13070.0f, 1010.0f);
         FRotator SpawnRotation = FRotator::ZeroRotator;
 
         ABoatPawn* SpawnedBoat = GetWorld()->SpawnActor<ABoatPawn>(GI->SelectedBoatClass, SpawnLocation, SpawnRotation);
