@@ -3,7 +3,6 @@
 #include "WaterSurface.h"
 #include "IForceProviderCore.h"
 
-
 class BOATCORE_API PressureDragProviderCore : public IForceProviderCore
 {
 public:
@@ -19,8 +18,6 @@ protected:
     float Fp = 0.5f;
     float Fs = 0.5f;
     float ReferenceSpeed = 1.0f;
-
-private:
 
 };
 

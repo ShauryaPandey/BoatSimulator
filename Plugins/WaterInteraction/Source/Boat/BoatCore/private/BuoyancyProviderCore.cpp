@@ -3,6 +3,14 @@
 #include "ForceProviderHelpersCore.h"
 #include "WorldAdaptor.h"
 
+/// <summary>
+/// Compute force on a polygon of the hull mesh based on buoyancy.
+/// </summary>
+/// <param name="info"></param>
+/// <param name="waterSurface"></param>
+/// <param name="hullMesh"></param>
+/// <param name="world"></param>
+/// <returns></returns>
 FVector BuoyancyProviderCore::ComputeForce(const PolyInfo* info, const IWaterSurface* waterSurface,
     MeshAdaptor* hullMesh /*Does not OWN*/, WorldAdaptor* world) const
 {

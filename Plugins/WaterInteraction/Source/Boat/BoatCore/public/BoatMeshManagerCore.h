@@ -22,16 +22,13 @@ class BOATCORE_API BoatMeshManagerCore : public IBoatRealTimeVertexProvider, pub
     }
     BoatMeshManagerCore() = default;
     virtual ~BoatMeshManagerCore() = default;
-    //{
-    //    //delete HullMesh;
-    //}
+    
     virtual void CalculateGlobalHullTriangles(TriangleInfoList& globalHullTriangles) const override;
     virtual FVector GetRudderTransform() const override;
 protected:
     TArray<FVector> LocalVertices;
     TArray<uint32> LocalIndices;
     TArray<FVector> LocalNormals;
-    //const MeshAdaptor* HullMesh = nullptr;
 private:
     const TUniquePtr<MeshAdaptor> HullMesh;
     mutable TOptional<FVector> RudderLocation;

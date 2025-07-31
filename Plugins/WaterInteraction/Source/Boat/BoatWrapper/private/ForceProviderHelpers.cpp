@@ -56,7 +56,7 @@ namespace ForceProviderHelpers
 
     /// <summary>
     /// Given an array of vertices, this function calculates the centroid and return that. 
-    /// It doesnt take into account the mass distribution.
+    /// It doesn't take into account the mass distribution.
     /// </summary>
     /// <param name="vertices"></param>
     /// <returns></returns>
@@ -90,23 +90,18 @@ namespace ForceProviderHelpers
         FVector v2 = Poly.gPointsContainer.Points[2];
         FVector edge0 = v1 - v0;
         FVector edge1 = v2 - v0;
-        
+
         FVector forceDir = (edge0 ^ edge1).GetSafeNormal();
-        //forceDir = -forceDir; //Normal of the triangle calculated this way is projecting inwards
-        //if (ShouldDrawDebug)
-        //{
-        //    DrawDebugSphere(World, Poly.gCentroid, 10.f, 8, FColor::Red, false,0,2.0f);
-        //    //Add debug for force Direction
-        //    DrawDebugDirectionalArrow(
-        //        World,
-        //        Poly.gCentroid,
-        //        Poly.gCentroid + forceDir * 100.0f,
-        //        12.0f, FColor::Yellow, false, 2.0f, 0,2.0f
-        //    );
-        //}
+
         return forceDir;
     }
-
+    /// <summary>
+    ///  This function finds the interpolation point between two vertices of a triangle at the water sample height.
+    /// </summary>
+    /// <param name="vertex2"></param>
+    /// <param name="vertex1"></param>
+    /// <param name="waterSample"></param>
+    /// <returns></returns>
     FVector FindInterpPoint(FVector& vertex2, FVector& vertex1, const FWaterSample& waterSample)
     {
         FVector localLine = vertex2 - vertex1;
@@ -119,7 +114,16 @@ namespace ForceProviderHelpers
         FVector midPoint = vertex1 + ratio * localLine;
         return midPoint;
     }
-
+    /// <summary>
+    /// This function computes the complex polygon formed by the submerged vertices of a triangle.
+    /// </summary>
+    /// <param name="outPointsContainer"></param>
+    /// <param name="vertex1"></param>
+    /// <param name="isVertex2Submerged"></param>
+    /// <param name="vertex2"></param>
+    /// <param name="vertex3"></param>
+    /// <param name="waterSample"></param>
+    /// <param name="isVertex3Submerged"></param>
     void ComputeComplexPolygon(PolyPointsContainer& outPointsContainer, FVector vertex1, bool isVertex2Submerged, FVector vertex2, FVector vertex3, const FWaterSample& waterSample, bool isVertex3Submerged)
     {
         outPointsContainer.Points.Push(vertex1);
@@ -151,7 +155,7 @@ namespace ForceProviderHelpers
         }
     }
 
-    /// <summary>
+/// <summary>
 /// This function finds if a triangle is completely, partially or not at all submerged in the water.
 /// </summary>
 /// <param name="vertex1"></param>
@@ -162,7 +166,7 @@ namespace ForceProviderHelpers
     void ClipTriangleAgainstWater(FVector vertex1, FVector vertex2, FVector vertex3, PolyPointsContainer& outPointsContainer, const FWaterSample& waterSample)
     {
         TRACE_CPUPROFILER_EVENT_SCOPE(ABoatPawn::ClipTriangleAgainstWater);
-        check(vertex1 != vertex2 && vertex1 != vertex3 && vertex1 !=vertex3);
+        check(vertex1 != vertex2 && vertex1 != vertex3 && vertex1 != vertex3);
         bool isVertex1Submerged = false;
         bool isVertex2Submerged = false;
         bool isVertex3Submerged = false;
@@ -217,13 +221,20 @@ namespace ForceProviderHelpers
         }
     }
 
-    bool GetSubmergedPolygon(const TriangleInfo& triangle, PolyInfo& outPoly,const FWaterSample& waterSample)
+    /// <summary>
+    /// This function finds the submerged polygon from a triangle and water sample. It checks if the triangle is fully, or partially submerged in the water and returns the polygon formed by the submerged vertices.
+    /// </summary>
+    /// <param name="triangle"></param>
+    /// <param name="outPoly"></param>
+    /// <param name="waterSample"></param>
+    /// <returns></returns>
+    bool GetSubmergedPolygon(const TriangleInfo& triangle, PolyInfo& outPoly, const FWaterSample& waterSample)
     {
         auto TriVertex1 = triangle.Vertex1;
         auto TriVertex2 = triangle.Vertex2;
         auto TriVertex3 = triangle.Vertex3;
 
-        outPoly.gPointsContainer.Points.Reset(); 
+        outPoly.gPointsContainer.Points.Reset();
         //Maybe check if water is there
         //Check if centroid of boat x,y exists on the water
         if (waterSample.IsValid == false)
@@ -241,18 +252,27 @@ namespace ForceProviderHelpers
         ForceProviderHelpers::CalcPolyAreaAndCentroid(outPoly);
         return true;
     }
-
-    FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo, FVector waterVelocity, const UStaticMeshComponent* hullMesh,const UWorld* world, bool shouldDrawDebug)
+    /// <summary>
+    /// This function calculates the relative velocity of the water flow at the center of the polygon. 
+    /// The direction of the flow is tangential to the surface of the water at the polygon's center.
+    /// </summary>
+    /// <param name="polyInfo"></param>
+    /// <param name="waterVelocity"></param>
+    /// <param name="hullMesh"></param>
+    /// <param name="world"></param>
+    /// <param name="shouldDrawDebug"></param>
+    /// <returns></returns>
+    FVector CalculateRelativeVelocityOfFlowAtPolyCenter(const PolyInfo& polyInfo, FVector waterVelocity, const UStaticMeshComponent* hullMesh, const UWorld* world, bool shouldDrawDebug)
     {
         check(world != nullptr);
-       
+
         check(hullMesh != nullptr);
         if (world == nullptr || hullMesh == nullptr)
         {
             return FVector{};
         }
         const float UU_TO_M = 0.01f;
-        FVector polyVelocity = CalculatePolyVelocity(polyInfo, hullMesh); //Velocity should be in m/s but unreals default units are cm/s
+        FVector polyVelocity = CalculatePolyVelocity(polyInfo, hullMesh); //Velocity should be in m/s but unreal's default units are cm/s
 
         FVector normal = ForceProviderHelpers::CalculateForceDirectionOnPoly(polyInfo, false/*DebugHUD.ShouldDrawDebug*/, world); //This is the force applied on the poly but we want the normal that is projecting out
         normal *= -1.0f;
@@ -299,6 +319,4 @@ namespace ForceProviderHelpers
 
         return polyPointVelocity;
     }
-
-
 }

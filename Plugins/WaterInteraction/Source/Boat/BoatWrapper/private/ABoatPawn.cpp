@@ -84,9 +84,12 @@ void ABoatPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     }
 
 }
+/// <summary>
+/// This function runs when the boat falls off the ocean mesh and it needs to spawn back to the place it started from.
+/// </summary>
+/// <param name="DmgType"></param>
 void ABoatPawn::FellOutOfWorld(const UDamageType& DmgType)
 {
-    //SetActorTransform(RespawnTransform, false, nullptr, ETeleportType::ResetPhysics);
     HullMesh->SetWorldTransform(RespawnTransform);
     HullMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
     HullMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
@@ -114,6 +117,10 @@ void ABoatPawn::ToggleBuoyancyDebug()
     }
 }
 
+/// <summary>
+/// This function handles the forward and backward movement of the boat.
+/// </summary>
+/// <param name="Value"></param>
 void ABoatPawn::Throttle(const FInputActionValue& Value)
 {
     constexpr float UU_TO_M = 0.01f;
@@ -130,6 +137,10 @@ void ABoatPawn::Throttle(const FInputActionValue& Value)
     }
 }
 
+/// <summary>
+/// This function handles the steering of the boat based on the input value.
+/// </summary>
+/// <param name="Value"></param>
 void ABoatPawn::Steer(const FInputActionValue& Value)
 {
     float AxisValue = Value.Get<float>();
@@ -277,12 +288,6 @@ float ABoatPawn::CalculateIntegratedKFactorForBoat(const PolyInfoList& polyList)
 
     FVector BoatForward = FVector(0, 1, 0);
 
-    //if (ShouldDrawDebug)
-    //{
-    //    //Draw the center of the boat
-    //    DrawDebugLine(GetWorld(), gBoatCenter, gBoatCenter + (FVector::UpVector * 50.0f), FColor::Magenta, false, 0.0f, 0, 2.0f);
-    //    DrawDebugDirectionalArrow(GetWorld(), HullMesh->Bounds.Origin, HullMesh->Bounds.Origin + HullMesh->GetComponentTransform().TransformVector(FVector(0, 1, 0)) * 1000, 200, FColor::Red, false, 5.0f, 0, 2.0f);
-    //}
     float numerator = 0.0f, denominator = 0.0f;
     for (const auto& info : polyList.Items)
     {
@@ -292,14 +297,10 @@ float ABoatPawn::CalculateIntegratedKFactorForBoat(const PolyInfoList& polyList)
         if (dot > 0.0f)
         {
             numerator += (1 + ForwardTrianglesKFactor) * info.Area;
-            /* if (ShouldDrawDebug)
-                 DrawDebugSphere(GetWorld(), info.gCentroid, 5.0f, 10, FColor::Green);*/
         }
         else
         {
             numerator += (1 + BackTrianglesKFactor) * info.Area;
-            //if (ShouldDrawDebug)
-            //    DrawDebugSphere(GetWorld(), info.gCentroid, 5.0f, 10, FColor::Red);
         }
         denominator += info.Area;
     }

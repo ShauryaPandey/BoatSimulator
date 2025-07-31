@@ -14,7 +14,7 @@ FString UViscoscityProvider::GetForceProviderName() const
 }
 
 /// <summary>
-/// This function calculates the Reynolds number that is essential to calculating the viscoscity
+/// This function calculates the Reynolds number that is essential to calculating the viscosity.
 /// </summary>
 /// <param name="hullMesh"></param>
 /// <param name="waterSurface"></param>
@@ -57,64 +57,5 @@ FVector UViscoscityProvider::ComputeForce(const PolyInfo* info, IForceContext co
     
     FVector viscousForce = ViscoscityProviderCore::ComputeForce(info, context.WaterSurface, &meshAdaptor,&worldAdaptor);
     return viscousForce;
-    //const float KFactor = 1.4f;/*CalculateIntegratedKFactorForBoat(polyList);*/ //For optimization
-    ////Runs only once
-    //if (!ReynoldsNumber.IsSet())
-    //{
-    //    ReynoldsNumber = CalculateReynoldsNumber(context.HullMesh, context.WaterSurface);
-    //}
-    //if (ReynoldsNumber.GetValue() <= KINDA_SMALL_NUMBER)
-    //{
-    //    return FVector{}; //no viscous force
-    //}
-    //if (!ForceConstant.IsSet())
-    //{
-    //    ForceConstant = 0.5f * FluidDensity * 0.075f / FMath::Square((FMath::LogX(10, ReynoldsNumber.GetValue()) - 2));
-    //}
-    ////const float forceConstant = 0.5f * FluidDensity * 0.075f / FMath::Square((FMath::LogX(10, ReynoldsNumber) - 2)); //To-Do : Move out of this function
-    //ensure(context.World != nullptr);
-    ////Calculation of viscous force
-    //FVector forceDir = ForceProviderHelpers::CalculateForceDirectionOnPoly(*info,context.DebugHUD->ShouldDrawDebug, context.World); //This is the force applied on the poly
 
-    ////If it is an inside poly then ignore
-    //if (FVector::DotProduct(forceDir, FVector::UpVector) < 0.0f)
-    //{
-    //    return FVector{};
-    //}
-
-    //ensure(context.WaterSurface != nullptr);
-    //if (context.WaterSurface == nullptr)
-    //{
-    //    return FVector{};
-    //}
-    //auto waterSample = context.WaterSurface->SampleHeightAt(FVector2D{ info->gCentroid.X, info->gCentroid.Y },
-    //    context.World->TimeSeconds);
-    //float depth_uu = waterSample.Position.Z - info->gCentroid.Z;
-    ////If the poly is above water height then ignore
-    //if (depth_uu <= 0)
-    //{
-    //    return FVector{};
-    //}
-
-    //float forceMagnitude = ForceConstant.GetValue();
-    //forceMagnitude *= info->Area * UU_TO_M * UU_TO_M;
-    ////Calculate Relative velocity of flow at this poly
-
-    //FVector tangentialVelocity = ForceProviderHelpers::CalculateRelativeVelocityOfFlowAtPolyCenter(*info,
-    //    context.WaterSurface->GetWaterVelocity(),context.HullMesh,context.World,
-    //    context.DebugHUD->ShouldDrawViscoscityDebug);
-
-    //ensure(!tangentialVelocity.ContainsNaN());
-    //auto tangentialVelocitySize = tangentialVelocity.Size();
-    //UE_LOG(LogTemp, Log, TEXT("TangentialVelocity : %f"), tangentialVelocitySize);
-    //forceMagnitude *= tangentialVelocitySize;
-    //FVector viscousForce = tangentialVelocity * forceMagnitude * (KFactor)*M_TO_UU; //KFactor is actually 1 + K because tha
-    ////if (context.DebugHUD->ShouldDrawViscoscityDebug)
-    ////{
-    ////    DrawDebugSphere(context.World, info->gCentroid, 2.f, 8, FColor::Red, false, 0.1f, 5);
-    ////    //Add debug for force Direction
-    ////    DrawDebugDirectionalArrow(context.World, info->gCentroid,
-    ////        info->gCentroid + viscousForce * 0.1f, 12.0f, FColor::Magenta, false, 0.1f, 0, 1.0f);
-    ////}
-    //return viscousForce;
 }

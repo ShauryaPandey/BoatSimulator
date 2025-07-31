@@ -2,6 +2,11 @@
 #include "BoatMeshManagerCore.h"
 #include "Async/ParallelFor.h"
 
+/// <summary>
+/// This function calculates the global hull triangles based on the local vertices and indices.
+/// Global coordinates change every frame based on the boat's transform.
+/// </summary>
+/// <param name="globalHullTriangles"></param>
 void BoatMeshManagerCore::CalculateGlobalHullTriangles(TriangleInfoList& globalHullTriangles) const
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UBoatForceComponent::CalculateGlobalHullTriangles);
@@ -45,6 +50,10 @@ void BoatMeshManagerCore::CalculateGlobalHullTriangles(TriangleInfoList& globalH
         });
 }
 
+/// <summary>
+/// Gets the local rudder transform.
+/// </summary>
+/// <returns></returns>
 FVector BoatMeshManagerCore::GetRudderTransform() const
 {
     if (!RudderLocation.IsSet())
@@ -54,6 +63,10 @@ FVector BoatMeshManagerCore::GetRudderTransform() const
     return HullMesh->GetComponentTransform().TransformPosition(RudderLocation.GetValue());
 }
 
+/// <summary>
+/// Get the local transform of the rudder based on the boat's orientation.
+/// </summary>
+/// <returns></returns>
 FVector BoatMeshManagerCore::CalcLocalRudderTransform() const
 {
     FVector rudderLocalLocation;
@@ -157,38 +170,3 @@ FVector BoatMeshManagerCore::CalcLocalRudderTransform() const
     }
     return rudderLocalLocation;
 }
-
-//void BoatMeshManagerCore::CalcLocalVerticesData()
-//{
-//    check(HullMesh->GetStaticMesh() != nullptr);
-//
-//    if (HullMesh->GetStaticMesh() != nullptr)
-//    {
-//        const auto& LOD = HullMesh->GetStaticMesh()->GetRenderData()->LODResources[0];
-//        const int numVerts = LOD.GetNumVertices();
-//
-//        LocalVertices.SetNum(numVerts);
-//        const auto& vertexPositionBuffer = LOD.VertexBuffers.PositionVertexBuffer;
-//        for (int i = 0; i < LocalVertices.Num(); ++i)
-//        {
-//            LocalVertices[i] = (FVector)vertexPositionBuffer.VertexPosition(i);
-//        }
-//
-//        LocalIndices.SetNum(LOD.IndexBuffer.GetNumIndices());
-//
-//        for (int i = 0; i < LocalIndices.Num(); ++i)
-//        {
-//            LocalIndices[i] = LOD.IndexBuffer.GetIndex(i);
-//        }
-//        LocalNormals.SetNum(numVerts);
-//        const auto& smvb = LOD.VertexBuffers.StaticMeshVertexBuffer;
-//        for (int i = 0; i < numVerts; ++i)
-//        {
-//            LocalNormals[i] = static_cast<FVector>(smvb.VertexTangentZ(i));
-//        }
-//    }
-//    else
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("Boat does not have a static mesh"));
-//    }
-//}

@@ -5,7 +5,10 @@
 #include "StaticMeshResources.h"
 #include "Components/StaticMeshComponent.h"
 
-
+/// <summary>
+/// This function calculates the local vertices, indices and normals of the boat hull mesh.
+/// It runs at the start of the simulation since the local vertex data is static.
+/// </summary>
 void BoatMeshManager::CalcLocalVerticesData()
 {
     ensure(HullMesh->GetStaticMesh() != nullptr);

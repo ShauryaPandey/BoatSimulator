@@ -54,7 +54,6 @@ namespace ForceProviderHelpers::Core
 
         //Velocity should be in m/s
         FVector relativePolyVelocity = polyVelocity - waterVelocity; //the sign does not matter
-
         FVector tangentialFlowVector = relativePolyVelocity - (normal * FVector::DotProduct(relativePolyVelocity, normal));
         auto localPosition = hullMesh->GetComponentTransform().InverseTransformVector(polyInfo.gCentroid);
         UE_LOG(LogTemp, Warning, TEXT("Water flow velocity : %f,%f,%f at Boat local position : %f,%f,%f"), tangentialFlowVector.X, tangentialFlowVector.Y, tangentialFlowVector.Z, localPosition.X, localPosition.Y, localPosition.Z);

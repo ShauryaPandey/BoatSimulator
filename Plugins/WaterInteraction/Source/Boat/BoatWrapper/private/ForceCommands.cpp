@@ -12,6 +12,7 @@ void FAddTorqueCommand::Execute(UPrimitiveComponent* Target)
 {
     Target->AddTorqueInRadians(Torque);
 }
+
 void FAddForceAtLocationCommand::DrawDebug(const UWorld* world)
 {
     if (world)

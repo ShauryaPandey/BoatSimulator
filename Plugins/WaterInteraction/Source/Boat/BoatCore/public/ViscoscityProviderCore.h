@@ -2,7 +2,6 @@
 #include "WaterSurface.h"
 #include "IForceProviderCore.h"
 
-
 class BOATCORE_API ViscoscityProviderCore : public IForceProviderCore
 {
 public:

@@ -1,7 +1,7 @@
 #include "CoreMinimal.h"
 #include "WaterSurface.h"
 #include "IForceProviderCore.h"
-//Stateless
+
 class BOATCORE_API BuoyancyProviderCore : public IForceProviderCore
 {
 public:

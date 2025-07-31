@@ -4,7 +4,7 @@
 #include "PolyInfo.h"
 #include "MeshAdaptor.h"
 #include "WorldAdaptor.h"
-//Stateless
+
 class BOATCORE_API IForceProviderCore
 {
 public:

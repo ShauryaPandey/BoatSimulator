@@ -6,13 +6,26 @@
 #include "Async/ParallelFor.h"
 #include "Components/StaticMeshComponent.h"
 
+/// <summary>
+/// Each provider provides a filtering process to get the polygon that is submerged in water.
+/// </summary>
+/// <param name="triangle"></param>
+/// <param name="outPoly"></param>
+/// <param name="waterSample"></param>
+/// <returns></returns>
 bool UForceProviderBase::GetFilteredPolygon(const TriangleInfo& triangle, PolyInfo& outPoly, const FWaterSample& waterSample) const
 {
     // Default implementation, can be overridden by derived classes
     return ForceProviderHelpers::GetSubmergedPolygon(triangle, outPoly, waterSample);
 }
 
-
+/// <summary>
+/// Contribute forces from all force providers to the outQueue.
+/// </summary>
+/// <param name="forceProviders"></param>
+/// <param name="context"></param>
+/// <param name="outQueue"></param>
+/// <param name="Mutex"></param>
 void UForceProviderBase::ContributeForces(TArray<UForceProviderBase*>& forceProviders, IForceContext context, TArray<FCommandPtr>& outQueue, FCriticalSection& Mutex)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UForceProviderBase::ContributeForces);
@@ -30,8 +43,6 @@ void UForceProviderBase::ContributeForces(TArray<UForceProviderBase*>& forceProv
     }
     TArray<UE::Tasks::FTask> TaskHandles;
 
-    //int BatchSize = 100;
-    //int NumBatches = context.HullTriangles->Items.Num() / BatchSize;
     int NumBatches;
     int BatchSize;
     if (context.HullTriangles->Items.Num() <= 5000)
@@ -86,9 +97,6 @@ void UForceProviderBase::ContributeForces(TArray<UForceProviderBase*>& forceProv
                         localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
                         localTotalForce += polyForce;
                     }
-                    //FVector polyForce = ComputeForce(&polyInfo, context);
-                    //localTotalTorque += FVector::CrossProduct(polyInfo.gCentroid - context.HullMesh->GetCenterOfMass(), polyForce);
-                    //localTotalForce += polyForce;
                 }
                 Mutex.Lock();
                 totalForce += localTotalForce;
@@ -100,22 +108,8 @@ void UForceProviderBase::ContributeForces(TArray<UForceProviderBase*>& forceProv
 
     UE::Tasks::FTask FinalTask = UE::Tasks::Launch(UE_SOURCE_LOCATION, [&]()
         {
-            //Mutex.Lock();
-            //if (context.DebugHUD != nullptr)
-            //{
-            //    auto totalForceInNewton = totalForce / 100.0f;
-            //    FString providerName = GetForceProviderName();
-            //    FString totalForceText = FString::Printf(TEXT("Total %s Force"), *providerName);
-            //    FString totalTorqueText = FString::Printf(TEXT("Total %s Torque"), *providerName);
-            //    context.DebugHUD->SetStat(totalForceText, totalForceInNewton.Size()); //Put all debug variables into DebugHUD
-            //    context.DebugHUD->SetStat(totalTorqueText, totalTorque.Size());
-            //}
-            // 3) enqueue a command
-            //Out queue is shared between multiple providers
             outQueue.Add(MakeUnique<FAddForceAtLocationCommand>(totalForce, context.HullMesh->GetCenterOfMass()));
             outQueue.Add(MakeUnique<FAddTorqueCommand>(totalTorque));
-            //Mutex.Unlock();
-
         }, UE::Tasks::Prerequisites(TaskHandles)); // Wait for all tasks to complete
     FinalTask.Wait(); // Wait for the final task to complete
 }

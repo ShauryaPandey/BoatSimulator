@@ -48,7 +48,7 @@ FVector PressureDragProviderCore::ComputeForce(const PolyInfo* info, const IWate
 
     if (dotProduct >= 0)
     {
-        //Linear component
+        //Pressure component
         float LinearComponent = CPD1 * (relativePolyVelocity.Size() / ReferenceSpeed);
         float QuadraticComponent = CPD2 * FMath::Square(relativePolyVelocity.Size() / ReferenceSpeed);
         
@@ -56,28 +56,16 @@ FVector PressureDragProviderCore::ComputeForce(const PolyInfo* info, const IWate
         auto part2 = FMath::Pow(dotProduct, Fp) * normal;
         pressureDragForce = part1 * part2; //Pressure drag force
         ensure(!pressureDragForce.ContainsNaN());
-        //if (context.DebugHUD->ShouldDrawPressureDragDebug)
-        //{
-        //    //Add debug for force Direction
-        //    DrawDebugDirectionalArrow(context.World, P->gCentroid,
-        //        P->gCentroid + pressureDragForce, 12.0f, FColor::Green, false, 0.1f, 2,1);
-        //}
     }
     else
     {
+        //Suction component
         float LinearComponent = CSD1 * (relativePolyVelocity.Size() / ReferenceSpeed);
         float QuadraticComponent = CSD2 * FMath::Square(relativePolyVelocity.Size() / ReferenceSpeed);
-        //pressureDragForce = (LinearComponent + QuadraticComponent) * P.Area * (UU_TO_M * UU_TO_M /*Area was in cm^2*/) * FMath::Pow(dotProduct, Fs) * normal; //Suction force
         auto part1 = (LinearComponent + QuadraticComponent) * info->Area * (UU_TO_M * UU_TO_M /*Area was in cm^2*/);
         auto part2 = FMath::Pow(FMath::Abs(dotProduct), Fs) * normal;
         pressureDragForce = part1 * part2; //Suction force
         ensure(!pressureDragForce.ContainsNaN());
-        //if (context.DebugHUD->ShouldDrawPressureDragDebug)
-        //{
-        //    //Add debug for force Direction
-        //    DrawDebugDirectionalArrow(context.World, P->gCentroid,
-        //        P->gCentroid + pressureDragForce, 12.0f, FColor::Orange, false, 0.1f, 2, 1);
-        //}
     }
     pressureDragForce *= M_TO_UU; //Convert to Unreal units (centinewtons)
     //if (debugHUD->ShouldDrawPressureDragDebug)

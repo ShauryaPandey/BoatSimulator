@@ -1,6 +1,7 @@
 # Binary and intermediate files
 Binaries/
 Build/
+Builds/
 DerivedDataCache/
 Intermediate/
 Saved/
