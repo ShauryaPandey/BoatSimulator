@@ -2,6 +2,8 @@
 
 A real-time boat-and-water physics + rendering simulation from scratch — implementing realistic water surface, buoyancy, drag, and boat motion using mesh-based water and physics, without relying on existing water-plugins.  
 
+Check out the project media: https://www.shauryapandey.tech/portfolio/boat-water-interaction
+
 ## 🚤 What this project is / Why it exists
 
 When I started this, I wanted to go beyond using pre-made tools and challenge myself: build water and boat interaction from first principles.  
